@@ -9,3 +9,5 @@ asyncpg
 alembic
 psycopg2-binary
 passlib[bcrypt]
+gunicorn
+uvloop
