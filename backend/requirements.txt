@@ -1,2 +1,11 @@
 fastapi
 uvicorn
+openai
+python-dotenv
+httpx
+pydantic-settings
+sqlalchemy
+asyncpg
+alembic
+psycopg2-binary
+passlib[bcrypt]
