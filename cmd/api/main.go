@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/secure-review/internal/config"
+	"github.com/secure-review/internal/database"
 	"github.com/secure-review/internal/handler"
 	"github.com/secure-review/internal/middleware"
 	"github.com/secure-review/internal/repository"
@@ -26,25 +27,30 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Connect to database
-	db, err := repository.NewPostgresDB(cfg.Database.URL)
+	// Connect to database using GORM (аналог TypeORM DataSource)
+	db, err := database.NewDatabase(cfg.Database.URL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer db.Close()
 
-	log.Println("Connected to database")
+	sqlDB, err := db.DB.DB()
+	if err != nil {
+		log.Fatalf("Failed to get sql.DB: %v", err)
+	}
+	defer sqlDB.Close()
 
-	// Run migrations
-	if err := repository.RunMigrations(db); err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+	log.Println("Connected to database via GORM")
+
+	// Run auto migrations (аналог TypeORM synchronize: true)
+	if err := db.AutoMigrate(); err != nil {
+		log.Fatalf("Failed to run auto migrations: %v", err)
 	}
 
-	log.Println("Migrations completed")
+	log.Println("Auto migrations completed")
 
-	// Initialize repositories
-	userRepo := repository.NewPostgresUserRepository(db)
-	reviewRepo := repository.NewPostgresReviewRepository(db)
+	// Initialize repositories with adapters (аналог getRepository() в TypeORM)
+	userRepo := repository.NewUserRepositoryAdapter(db.DB)
+	reviewRepo := repository.NewReviewRepositoryAdapter(db.DB)
 
 	// Initialize services
 	passwordHasher := service.NewBcryptPasswordHasher()

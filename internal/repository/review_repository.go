@@ -2,287 +2,198 @@ package repository
 
 import (
 	"context"
-	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
-	"github.com/secure-review/internal/domain"
+	"github.com/secure-review/internal/entity"
 )
 
-// PostgresReviewRepository implements domain.ReviewRepository for PostgreSQL
-type PostgresReviewRepository struct {
-	db *sql.DB
+// ReviewRepository - аналог Repository<CodeReview> в TypeORM
+type ReviewRepository struct {
+	db *gorm.DB
 }
 
-// NewPostgresReviewRepository creates a new PostgresReviewRepository
-func NewPostgresReviewRepository(db *sql.DB) *PostgresReviewRepository {
-	return &PostgresReviewRepository{db: db}
+// NewReviewRepository creates a new ReviewRepository - аналог getRepository(CodeReview)
+func NewReviewRepository(db *gorm.DB) *ReviewRepository {
+	return &ReviewRepository{db: db}
 }
 
-// Create creates a new code review in the database
-func (r *PostgresReviewRepository) Create(ctx context.Context, review *domain.CodeReview) error {
-	query := `
-		INSERT INTO code_reviews (id, user_id, title, code, language, status, result, created_at, updated_at, completed_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-	`
-
-	now := time.Now()
-	review.ID = uuid.New()
-	review.CreatedAt = now
-	review.UpdatedAt = now
-	review.Status = domain.ReviewStatusPending
-
-	_, err := r.db.ExecContext(
-		ctx,
-		query,
-		review.ID,
-		review.UserID,
-		review.Title,
-		review.Code,
-		review.Language,
-		review.Status,
-		review.Result,
-		review.CreatedAt,
-		review.UpdatedAt,
-		review.CompletedAt,
-	)
-
-	return err
+// Create creates a new code review - аналог repository.save()
+func (r *ReviewRepository) Create(ctx context.Context, review *entity.CodeReview) error {
+	return r.db.WithContext(ctx).Create(review).Error
 }
 
-// GetByID retrieves a code review by its ID
-func (r *PostgresReviewRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.CodeReview, error) {
-	query := `
-		SELECT id, user_id, title, code, language, status, result, created_at, updated_at, completed_at
-		FROM code_reviews
-		WHERE id = $1
-	`
-
-	review := &domain.CodeReview{}
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&review.ID,
-		&review.UserID,
-		&review.Title,
-		&review.Code,
-		&review.Language,
-		&review.Status,
-		&review.Result,
-		&review.CreatedAt,
-		&review.UpdatedAt,
-		&review.CompletedAt,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, domain.ErrReviewNotFound
-	}
-
+// FindByID finds a review by ID - аналог repository.findOne({ where: { id } })
+func (r *ReviewRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.CodeReview, error) {
+	var review entity.CodeReview
+	err := r.db.WithContext(ctx).First(&review, "id = ?", id).Error
 	if err != nil {
 		return nil, err
 	}
-
-	return review, nil
+	return &review, nil
 }
 
-// GetByUserID retrieves all code reviews for a user with pagination
-func (r *PostgresReviewRepository) GetByUserID(ctx context.Context, userID uuid.UUID, page, pageSize int) ([]domain.CodeReview, int, error) {
-	countQuery := `SELECT COUNT(*) FROM code_reviews WHERE user_id = $1`
-	var total int
-	err := r.db.QueryRowContext(ctx, countQuery, userID).Scan(&total)
+// FindByIDWithIssues finds a review with security issues preloaded
+// Аналог { relations: ['securityIssues'] } в TypeORM
+func (r *ReviewRepository) FindByIDWithIssues(ctx context.Context, id uuid.UUID) (*entity.CodeReview, error) {
+	var review entity.CodeReview
+	err := r.db.WithContext(ctx).
+		Preload("SecurityIssues").
+		First(&review, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &review, nil
+}
+
+// FindByIDWithUserAndIssues finds a review with user and security issues
+// Аналог { relations: ['user', 'securityIssues'] } в TypeORM
+func (r *ReviewRepository) FindByIDWithUserAndIssues(ctx context.Context, id uuid.UUID) (*entity.CodeReview, error) {
+	var review entity.CodeReview
+	err := r.db.WithContext(ctx).
+		Preload("User").
+		Preload("SecurityIssues").
+		First(&review, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &review, nil
+}
+
+// FindByUserID finds all reviews by user ID with pagination
+// Аналог repository.findAndCount({ where: { userId }, skip, take, order })
+func (r *ReviewRepository) FindByUserID(ctx context.Context, userID uuid.UUID, page, pageSize int) ([]entity.CodeReview, int64, error) {
+	var reviews []entity.CodeReview
+	var total int64
+
+	// Count total - аналог findAndCount
+	err := r.db.WithContext(ctx).
+		Model(&entity.CodeReview{}).
+		Where("user_id = ?", userID).
+		Count(&total).Error
 	if err != nil {
 		return nil, 0, err
 	}
 
+	// Get paginated results with preload - аналог { relations, skip, take, order }
 	offset := (page - 1) * pageSize
-	query := `
-		SELECT id, user_id, title, code, language, status, result, created_at, updated_at, completed_at
-		FROM code_reviews
-		WHERE user_id = $1
-		ORDER BY created_at DESC
-		LIMIT $2 OFFSET $3
-	`
+	err = r.db.WithContext(ctx).
+		Preload("SecurityIssues").
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(pageSize).
+		Find(&reviews).Error
 
-	rows, err := r.db.QueryContext(ctx, query, userID, pageSize, offset)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer rows.Close()
-
-	var reviews []domain.CodeReview
-	for rows.Next() {
-		var review domain.CodeReview
-		err := rows.Scan(
-			&review.ID,
-			&review.UserID,
-			&review.Title,
-			&review.Code,
-			&review.Language,
-			&review.Status,
-			&review.Result,
-			&review.CreatedAt,
-			&review.UpdatedAt,
-			&review.CompletedAt,
-		)
-		if err != nil {
-			return nil, 0, err
-		}
-		reviews = append(reviews, review)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, 0, err
-	}
-
-	return reviews, total, nil
+	return reviews, total, err
 }
 
-// Update updates an existing code review
-func (r *PostgresReviewRepository) Update(ctx context.Context, review *domain.CodeReview) error {
-	query := `
-		UPDATE code_reviews
-		SET title = $2, code = $3, language = $4, status = $5, result = $6, 
-		    updated_at = $7, completed_at = $8
-		WHERE id = $1
-	`
-
-	review.UpdatedAt = time.Now()
-
-	result, err := r.db.ExecContext(
-		ctx,
-		query,
-		review.ID,
-		review.Title,
-		review.Code,
-		review.Language,
-		review.Status,
-		review.Result,
-		review.UpdatedAt,
-		review.CompletedAt,
-	)
-
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return domain.ErrReviewNotFound
-	}
-
-	return nil
+// FindByUserIDAndStatus finds reviews by user ID and status
+// Аналог repository.find({ where: { userId, status } })
+func (r *ReviewRepository) FindByUserIDAndStatus(ctx context.Context, userID uuid.UUID, status entity.ReviewStatus) ([]entity.CodeReview, error) {
+	var reviews []entity.CodeReview
+	err := r.db.WithContext(ctx).
+		Preload("SecurityIssues").
+		Where("user_id = ? AND status = ?", userID, status).
+		Order("created_at DESC").
+		Find(&reviews).Error
+	return reviews, err
 }
 
-// Delete deletes a code review
-func (r *PostgresReviewRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	err := r.DeleteSecurityIssuesByReviewID(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	query := `DELETE FROM code_reviews WHERE id = $1`
-
-	result, err := r.db.ExecContext(ctx, query, id)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return domain.ErrReviewNotFound
-	}
-
-	return nil
+// Update updates a review - аналог repository.save()
+func (r *ReviewRepository) Update(ctx context.Context, review *entity.CodeReview) error {
+	return r.db.WithContext(ctx).Save(review).Error
 }
 
-// CreateSecurityIssue creates a new security issue for a review
-func (r *PostgresReviewRepository) CreateSecurityIssue(ctx context.Context, issue *domain.SecurityIssue) error {
-	query := `
-		INSERT INTO security_issues (id, review_id, severity, title, description, line_start, line_end, suggestion, cwe, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-	`
-
-	issue.ID = uuid.New()
-	issue.CreatedAt = time.Now()
-
-	_, err := r.db.ExecContext(
-		ctx,
-		query,
-		issue.ID,
-		issue.ReviewID,
-		issue.Severity,
-		issue.Title,
-		issue.Description,
-		issue.LineStart,
-		issue.LineEnd,
-		issue.Suggestion,
-		issue.CWE,
-		issue.CreatedAt,
-	)
-
-	return err
+// UpdateStatus updates only the status field - аналог repository.update(id, { status })
+func (r *ReviewRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status entity.ReviewStatus) error {
+	return r.db.WithContext(ctx).
+		Model(&entity.CodeReview{}).
+		Where("id = ?", id).
+		Update("status", status).Error
 }
 
-// GetSecurityIssuesByReviewID retrieves all security issues for a review
-func (r *PostgresReviewRepository) GetSecurityIssuesByReviewID(ctx context.Context, reviewID uuid.UUID) ([]domain.SecurityIssue, error) {
-	query := `
-		SELECT id, review_id, severity, title, description, line_start, line_end, suggestion, cwe, created_at
-		FROM security_issues
-		WHERE review_id = $1
-		ORDER BY 
-			CASE severity 
-				WHEN 'critical' THEN 1 
-				WHEN 'high' THEN 2 
-				WHEN 'medium' THEN 3 
-				WHEN 'low' THEN 4 
-				WHEN 'info' THEN 5 
-			END
-	`
+// UpdateFields updates specific fields - аналог repository.update(id, { ...fields })
+func (r *ReviewRepository) UpdateFields(ctx context.Context, id uuid.UUID, fields map[string]interface{}) error {
+	return r.db.WithContext(ctx).
+		Model(&entity.CodeReview{}).
+		Where("id = ?", id).
+		Updates(fields).Error
+}
 
-	rows, err := r.db.QueryContext(ctx, query, reviewID)
-	if err != nil {
-		return nil, err
+// Delete soft-deletes a review - аналог repository.softDelete(id)
+func (r *ReviewRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Delete(&entity.CodeReview{}, "id = ?", id).Error
+}
+
+// HardDelete permanently deletes a review - аналог repository.delete(id)
+func (r *ReviewRepository) HardDelete(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Unscoped().Delete(&entity.CodeReview{}, "id = ?", id).Error
+}
+
+// CountByUserID counts reviews for a user - аналог repository.count({ where: { userId } })
+func (r *ReviewRepository) CountByUserID(ctx context.Context, userID uuid.UUID) (int64, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&entity.CodeReview{}).
+		Where("user_id = ?", userID).
+		Count(&count).Error
+	return count, err
+}
+
+// CreateSecurityIssue creates a security issue - аналог repository.save() для SecurityIssue
+func (r *ReviewRepository) CreateSecurityIssue(ctx context.Context, issue *entity.SecurityIssue) error {
+	return r.db.WithContext(ctx).Create(issue).Error
+}
+
+// CreateSecurityIssues creates multiple security issues - аналог repository.save([...])
+func (r *ReviewRepository) CreateSecurityIssues(ctx context.Context, issues []entity.SecurityIssue) error {
+	if len(issues) == 0 {
+		return nil
 	}
-	defer rows.Close()
+	return r.db.WithContext(ctx).Create(&issues).Error
+}
 
-	var issues []domain.SecurityIssue
-	for rows.Next() {
-		var issue domain.SecurityIssue
-		err := rows.Scan(
-			&issue.ID,
-			&issue.ReviewID,
-			&issue.Severity,
-			&issue.Title,
-			&issue.Description,
-			&issue.LineStart,
-			&issue.LineEnd,
-			&issue.Suggestion,
-			&issue.CWE,
-			&issue.CreatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		issues = append(issues, issue)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return issues, nil
+// FindSecurityIssuesByReviewID finds all security issues for a review
+// Аналог repository.find({ where: { reviewId } })
+func (r *ReviewRepository) FindSecurityIssuesByReviewID(ctx context.Context, reviewID uuid.UUID) ([]entity.SecurityIssue, error) {
+	var issues []entity.SecurityIssue
+	err := r.db.WithContext(ctx).
+		Where("review_id = ?", reviewID).
+		Order("severity ASC, created_at ASC").
+		Find(&issues).Error
+	return issues, err
 }
 
 // DeleteSecurityIssuesByReviewID deletes all security issues for a review
-func (r *PostgresReviewRepository) DeleteSecurityIssuesByReviewID(ctx context.Context, reviewID uuid.UUID) error {
-	query := `DELETE FROM security_issues WHERE review_id = $1`
-	_, err := r.db.ExecContext(ctx, query, reviewID)
-	return err
+// Аналог repository.delete({ reviewId })
+func (r *ReviewRepository) DeleteSecurityIssuesByReviewID(ctx context.Context, reviewID uuid.UUID) error {
+	return r.db.WithContext(ctx).
+		Where("review_id = ?", reviewID).
+		Delete(&entity.SecurityIssue{}).Error
+}
+
+// FindRecentByUserID finds recent reviews for a user
+// Аналог repository.find({ where: { userId }, take: limit, order: { createdAt: 'DESC' } })
+func (r *ReviewRepository) FindRecentByUserID(ctx context.Context, userID uuid.UUID, limit int) ([]entity.CodeReview, error) {
+	var reviews []entity.CodeReview
+	err := r.db.WithContext(ctx).
+		Preload("SecurityIssues").
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&reviews).Error
+	return reviews, err
+}
+
+// FindPendingReviews finds all pending reviews (for background processing)
+// Аналог repository.find({ where: { status: 'pending' } })
+func (r *ReviewRepository) FindPendingReviews(ctx context.Context) ([]entity.CodeReview, error) {
+	var reviews []entity.CodeReview
+	err := r.db.WithContext(ctx).
+		Where("status = ?", entity.ReviewStatusPending).
+		Order("created_at ASC").
+		Find(&reviews).Error
+	return reviews, err
 }
