@@ -1,6 +1,9 @@
 package router
 
 import (
+	"time"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"github.com/secure-review/internal/config"
@@ -51,7 +54,16 @@ func (r *Router) Setup() *gin.Engine {
 	// Global middleware
 	engine.Use(middleware.Recovery())
 	engine.Use(middleware.Logger())
-	engine.Use(middleware.CORSWithConfig(r.config.Frontend.URL))
+
+	// CORS setup
+	engine.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{r.config.Frontend.URL},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "Accept", "Cache-Control", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Health check routes (no auth required)
 	engine.GET("/health", r.healthHandler.Health)
