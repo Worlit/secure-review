@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -36,6 +37,7 @@ func (h *ReviewHandler) CreateReview(c *gin.Context) {
 
 	var req domain.CreateReviewInput
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[CreateReview] Failed to bind JSON: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Invalid request body: " + err.Error(),
 		})

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	googleGithub "github.com/google/go-github/v69/github"
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -34,7 +35,7 @@ func NewGitHubAuthService(
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
 			RedirectURL:  redirectURL,
-			Scopes:       []string{"user:email", "read:user"},
+			Scopes:       []string{"user:email", "read:user", "repo"},
 			Endpoint:     github.Endpoint,
 		},
 		userRepo:       userRepo,
@@ -141,7 +142,15 @@ func (s *GitHubAuthServiceImpl) AuthenticateOrCreate(ctx context.Context, code s
 	// Try to find user by GitHub ID
 	user, err := s.userRepo.GetByGitHubID(ctx, ghUser.ID)
 	if err == nil && user != nil {
-		// User exists, generate token
+		// User exists, update token and generate session token
+		// Always update key details on login
+		user.GitHubLogin = &ghUser.Login
+		user.GitHubAccessToken = &accessToken
+		if ghUser.AvatarURL != "" {
+			user.AvatarURL = &ghUser.AvatarURL
+		}
+		_ = s.userRepo.Update(ctx, user)
+
 		token, err := s.tokenGenerator.GenerateToken(user.ID)
 		if err != nil {
 			return nil, err
@@ -159,6 +168,7 @@ func (s *GitHubAuthServiceImpl) AuthenticateOrCreate(ctx context.Context, code s
 			// Link GitHub account to existing user
 			user.GitHubID = &ghUser.ID
 			user.GitHubLogin = &ghUser.Login
+			user.GitHubAccessToken = &accessToken
 			if ghUser.AvatarURL != "" {
 				user.AvatarURL = &ghUser.AvatarURL
 			}
@@ -189,13 +199,14 @@ func (s *GitHubAuthServiceImpl) AuthenticateOrCreate(ctx context.Context, code s
 	}
 
 	user = &domain.User{
-		ID:          uuid.New(),
-		Email:       email,
-		Username:    username,
-		GitHubID:    &ghUser.ID,
-		GitHubLogin: &ghUser.Login,
-		AvatarURL:   &ghUser.AvatarURL,
-		IsActive:    true,
+		ID:                uuid.New(),
+		Email:             email,
+		Username:          username,
+		GitHubID:          &ghUser.ID,
+		GitHubLogin:       &ghUser.Login,
+		AvatarURL:         &ghUser.AvatarURL,
+		GitHubAccessToken: &accessToken,
+		IsActive:          true,
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
@@ -232,9 +243,10 @@ func (s *GitHubAuthServiceImpl) LinkAccount(ctx context.Context, userID uuid.UUI
 	}
 
 	return s.userRepo.LinkGitHub(ctx, userID, &domain.LinkGitHubInput{
-		GitHubID:    ghUser.ID,
-		GitHubLogin: ghUser.Login,
-		AvatarURL:   ghUser.AvatarURL,
+		GitHubID:          ghUser.ID,
+		GitHubLogin:       ghUser.Login,
+		AvatarURL:         ghUser.AvatarURL,
+		GitHubAccessToken: accessToken,
 	})
 }
 
@@ -251,4 +263,51 @@ func (s *GitHubAuthServiceImpl) UnlinkAccount(ctx context.Context, userID uuid.U
 	}
 
 	return s.userRepo.UnlinkGitHub(ctx, userID)
+}
+
+// ListRepositories lists repositories for the authenticated user
+func (s *GitHubAuthServiceImpl) ListRepositories(ctx context.Context, userID uuid.UUID) ([]domain.Repository, error) {
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, domain.ErrUserNotFound
+	}
+
+	if user.GitHubAccessToken == nil || *user.GitHubAccessToken == "" {
+		return nil, fmt.Errorf("GitHub account not linked or token missing")
+	}
+
+	client := googleGithub.NewClient(nil).WithAuthToken(*user.GitHubAccessToken)
+
+	opts := &googleGithub.RepositoryListByAuthenticatedUserOptions{
+		ListOptions: googleGithub.ListOptions{PerPage: 100},
+		Sort:        "updated",
+	}
+
+	var allRepos []*googleGithub.Repository
+	for {
+		repos, resp, err := client.Repositories.ListByAuthenticatedUser(ctx, opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch repositories: %w", err)
+		}
+		allRepos = append(allRepos, repos...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+
+	result := make([]domain.Repository, len(allRepos))
+	for i, r := range allRepos {
+		result[i] = domain.Repository{
+			ID:          r.GetID(),
+			Name:        r.GetName(),
+			FullName:    r.GetFullName(),
+			HTMLURL:     r.GetHTMLURL(),
+			Description: r.GetDescription(),
+			Language:    r.GetLanguage(),
+			Private:     r.GetPrivate(),
+		}
+	}
+
+	return result, nil
 }

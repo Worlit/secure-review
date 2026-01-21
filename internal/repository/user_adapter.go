@@ -84,9 +84,10 @@ func (a *UserRepositoryAdapter) Delete(ctx context.Context, id uuid.UUID) error 
 // LinkGitHub links GitHub account to user
 func (a *UserRepositoryAdapter) LinkGitHub(ctx context.Context, userID uuid.UUID, input *domain.LinkGitHubInput) error {
 	entityInput := &entity.LinkGitHubInput{
-		GitHubID:    input.GitHubID,
-		GitHubLogin: input.GitHubLogin,
-		AvatarURL:   input.AvatarURL,
+		GitHubID:          input.GitHubID,
+		GitHubLogin:       input.GitHubLogin,
+		AvatarURL:         input.AvatarURL,
+		GitHubAccessToken: input.GitHubAccessToken,
 	}
 	return a.repo.LinkGitHub(ctx, userID, entityInput)
 }
@@ -98,30 +99,32 @@ func (a *UserRepositoryAdapter) UnlinkGitHub(ctx context.Context, userID uuid.UU
 
 func domainUserToEntity(user *domain.User) *entity.User {
 	return &entity.User{
-		ID:           user.ID,
-		Email:        user.Email,
-		Username:     user.Username,
-		PasswordHash: user.PasswordHash,
-		GitHubID:     user.GitHubID,
-		GitHubLogin:  user.GitHubLogin,
-		AvatarURL:    user.AvatarURL,
-		IsActive:     user.IsActive,
-		CreatedAt:    user.CreatedAt,
-		UpdatedAt:    user.UpdatedAt,
+		ID:                user.ID,
+		Email:             user.Email,
+		Username:          user.Username,
+		PasswordHash:      user.PasswordHash,
+		GitHubID:          user.GitHubID,
+		GitHubLogin:       user.GitHubLogin,
+		AvatarURL:         user.AvatarURL,
+		GitHubAccessToken: user.GitHubAccessToken,
+		IsActive:          user.IsActive,
+		CreatedAt:         user.CreatedAt,
+		UpdatedAt:         user.UpdatedAt,
 	}
 }
 
 func entityUserToDomain(user *entity.User) *domain.User {
 	return &domain.User{
-		ID:           user.ID,
-		Email:        user.Email,
-		Username:     user.Username,
-		PasswordHash: user.PasswordHash,
-		GitHubID:     user.GitHubID,
-		GitHubLogin:  user.GitHubLogin,
-		AvatarURL:    user.AvatarURL,
-		IsActive:     user.IsActive,
-		CreatedAt:    user.CreatedAt,
-		UpdatedAt:    user.UpdatedAt,
+		ID:                user.ID,
+		Email:             user.Email,
+		Username:          user.Username,
+		PasswordHash:      user.PasswordHash,
+		GitHubID:          user.GitHubID,
+		GitHubLogin:       user.GitHubLogin,
+		AvatarURL:         user.AvatarURL,
+		GitHubAccessToken: user.GitHubAccessToken,
+		IsActive:          user.IsActive,
+		CreatedAt:         user.CreatedAt,
+		UpdatedAt:         user.UpdatedAt,
 	}
 }

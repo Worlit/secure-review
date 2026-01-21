@@ -124,16 +124,19 @@ func (r *UserRepository) ExistsByEmail(ctx context.Context, email string) (bool,
 // LinkGitHub links GitHub account to user
 func (r *UserRepository) LinkGitHub(ctx context.Context, userID uuid.UUID, input *entity.LinkGitHubInput) error {
 	return r.db.WithContext(ctx).Model(&entity.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
-		"github_id":    input.GitHubID,
-		"github_login": input.GitHubLogin,
-		"avatar_url":   input.AvatarURL,
+		"github_id":           input.GitHubID,
+		"github_login":        input.GitHubLogin,
+		"avatar_url":          input.AvatarURL,
+		"github_access_token": input.GitHubAccessToken,
 	}).Error
 }
 
 // UnlinkGitHub unlinks GitHub account from user
 func (r *UserRepository) UnlinkGitHub(ctx context.Context, userID uuid.UUID) error {
 	return r.db.WithContext(ctx).Model(&entity.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
-		"github_id":    nil,
-		"github_login": nil,
+		"github_id":           nil,
+		"github_login":        nil,
+		"avatar_url":          nil,
+		"github_access_token": nil,
 	}).Error
 }

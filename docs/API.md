@@ -241,7 +241,7 @@ Authorization: Bearer <token>
 
 ---
 
-#### POST /auth/github/unlink
+#### DELETE /auth/github/link
 
 Отвязать GitHub аккаунт от пользователя. Требует аутентификации и наличия пароля.
 
@@ -258,6 +258,57 @@ Authorization: Bearer <token>
   "message": "GitHub account unlinked successfully"
 }
 ```
+
+---
+
+### GitHub Данные
+
+#### GET /github/repos
+
+Получение списка репозиториев пользователя с GitHub.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**Response (200 OK):**
+
+```json
+[
+  {
+    "id": 1296269,
+    "name": "Hello-World",
+    "full_name": "octocat/Hello-World",
+    "html_url": "https://github.com/octocat/Hello-World",
+    "description": "This your first repo!",
+    "language": null,
+    "private": false
+  }
+]
+```
+
+**Errors:**
+
+- `401 Unauthorized` - Требуется авторизация
+- `500 Internal Server Error` - Ошибка получения данных от GitHub
+
+---
+
+### Пользователи
+
+Authorization: Bearer <token>
+
+````
+
+**Response (200 OK):**
+
+```json
+{
+  "message": "GitHub account unlinked successfully"
+}
+````
 
 **Errors:**
 

@@ -57,6 +57,8 @@ FRONTEND_URL=https://yourdomain.com
    GET /api/v1/auth/github
    ```
 
+   _Запрашиваемые права (scopes):_ `user:email`, `read:user`, `repo` (для чтения списка репозиториев)
+
 2. Пользователь перенаправляется на GitHub для авторизации
 
 3. После авторизации GitHub перенаправляет на callback URL

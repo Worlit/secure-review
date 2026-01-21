@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -186,7 +188,26 @@ func (s *ReviewServiceImpl) analyzeCode(ctx context.Context, review *domain.Code
 	}
 
 	review.Status = domain.ReviewStatusCompleted
-	review.Result = &result.Summary
+
+	// Format the result to include score, summary and suggestions
+	var resultBuilder strings.Builder
+	resultBuilder.WriteString(fmt.Sprintf("# Analysis Result\n\n"))
+	resultBuilder.WriteString(fmt.Sprintf("**Overall Safe Score:** %d/100\n\n", result.OverallScore))
+
+	resultBuilder.WriteString("## Summary\n")
+	resultBuilder.WriteString(result.Summary)
+	resultBuilder.WriteString("\n\n")
+
+	if len(result.Suggestions) > 0 {
+		resultBuilder.WriteString("## Code Quality Suggestions\n")
+		for _, suggestion := range result.Suggestions {
+			resultBuilder.WriteString(fmt.Sprintf("- %s\n", suggestion))
+		}
+	}
+
+	resultString := resultBuilder.String()
+	review.Result = &resultString
+
 	now := time.Now()
 	review.CompletedAt = &now
 	review.UpdatedAt = now

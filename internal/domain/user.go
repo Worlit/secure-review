@@ -8,16 +8,17 @@ import (
 
 // User represents a user in the system
 type User struct {
-	ID           uuid.UUID `json:"id"`
-	Email        string    `json:"email"`
-	Username     string    `json:"username"`
-	PasswordHash string    `json:"-"`
-	GitHubID     *int64    `json:"github_id,omitempty"`
-	GitHubLogin  *string   `json:"github_login,omitempty"`
-	AvatarURL    *string   `json:"avatar_url,omitempty"`
-	IsActive     bool      `json:"is_active"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID                uuid.UUID `json:"id"`
+	Email             string    `json:"email"`
+	Username          string    `json:"username"`
+	PasswordHash      string    `json:"-"`
+	GitHubID          *int64    `json:"github_id,omitempty"`
+	GitHubLogin       *string   `json:"github_login,omitempty"`
+	AvatarURL         *string   `json:"avatar_url,omitempty"`
+	GitHubAccessToken *string   `json:"-"`
+	IsActive          bool      `json:"is_active"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
 }
 
 // CreateUserInput represents input for creating a new user
@@ -41,9 +42,10 @@ type UpdateUserInput struct {
 
 // LinkGitHubInput represents input for linking GitHub account
 type LinkGitHubInput struct {
-	GitHubID    int64  `json:"github_id"`
-	GitHubLogin string `json:"github_login"`
-	AvatarURL   string `json:"avatar_url"`
+	GitHubID          int64  `json:"github_id"`
+	GitHubLogin       string `json:"github_login"`
+	AvatarURL         string `json:"avatar_url"`
+	GitHubAccessToken string `json:"github_access_token"`
 }
 
 // UserResponse represents the response for user data

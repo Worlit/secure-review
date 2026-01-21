@@ -120,6 +120,28 @@ func (h *GitHubHandler) UnlinkAccount(c *gin.Context) {
 	})
 }
 
+// ListRepositories lists GitHub repositories for the authenticated user
+// GET /api/v1/github/repos
+func (h *GitHubHandler) ListRepositories(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	repos, err := h.githubAuthService.ListRepositories(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to list repositories: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, repos)
+}
+
 func generateState() string {
 	b := make([]byte, 16)
 	rand.Read(b)

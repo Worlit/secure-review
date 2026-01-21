@@ -70,7 +70,7 @@ func (r *Router) Setup() *gin.Engine {
 	engine.GET("/ready", r.healthHandler.Ready)
 
 	// API routes
-	api := engine.Group("/api")
+	api := engine.Group("/api/v1")
 	{
 		// Auth routes (no auth required)
 		auth := api.Group("/auth")
@@ -100,6 +100,13 @@ func (r *Router) Setup() *gin.Engine {
 			users.GET("/me", r.userHandler.GetProfile)
 			users.PUT("/me", r.userHandler.UpdateProfile)
 			users.DELETE("/me", r.userHandler.DeleteAccount)
+		}
+
+		// GitHub Data routes (auth required)
+		gh := api.Group("/github")
+		gh.Use(r.authMiddleware.RequireAuth())
+		{
+			gh.GET("/repos", r.githubHandler.ListRepositories)
 		}
 
 		// Review routes (auth required)

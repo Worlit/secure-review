@@ -22,9 +22,10 @@ type User struct {
 	PasswordHash string `gorm:"size:255" json:"-"`
 
 	// GitHub integration - nullable columns - аналог @Column({ nullable: true })
-	GitHubID    *int64  `gorm:"index" json:"github_id,omitempty"`
-	GitHubLogin *string `gorm:"size:100" json:"github_login,omitempty"`
-	AvatarURL   *string `gorm:"size:500" json:"avatar_url,omitempty"`
+	GitHubID          *int64  `gorm:"index" json:"github_id,omitempty"`
+	GitHubLogin       *string `gorm:"size:100" json:"github_login,omitempty"`
+	AvatarURL         *string `gorm:"size:500" json:"avatar_url,omitempty"`
+	GitHubAccessToken *string `gorm:"size:255" json:"-"`
 
 	// Active flag - аналог @Column({ default: true })
 	IsActive bool `gorm:"default:true" json:"is_active"`
@@ -90,7 +91,8 @@ type UpdateUserInput struct {
 
 // LinkGitHubInput represents input for linking GitHub account
 type LinkGitHubInput struct {
-	GitHubID    int64  `json:"github_id"`
-	GitHubLogin string `json:"github_login"`
-	AvatarURL   string `json:"avatar_url"`
+	GitHubID          int64  `json:"github_id"`
+	GitHubLogin       string `json:"github_login"`
+	AvatarURL         string `json:"avatar_url"`
+	GitHubAccessToken string `json:"github_access_token"`
 }

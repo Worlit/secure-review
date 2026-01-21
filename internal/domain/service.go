@@ -23,6 +23,18 @@ type GitHubAuthService interface {
 	AuthenticateOrCreate(ctx context.Context, code string) (*AuthResponse, error)
 	LinkAccount(ctx context.Context, userID uuid.UUID, code string) error
 	UnlinkAccount(ctx context.Context, userID uuid.UUID) error
+	ListRepositories(ctx context.Context, userID uuid.UUID) ([]Repository, error)
+}
+
+// Repository represents a GitHub repository
+type Repository struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	FullName    string `json:"full_name"`
+	HTMLURL     string `json:"html_url"`
+	Description string `json:"description"`
+	Language    string `json:"language"`
+	Private     bool   `json:"private"`
 }
 
 // UserService defines the interface for user operations

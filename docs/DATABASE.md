@@ -15,10 +15,11 @@ type User struct {
     Email        string         `gorm:"size:255;uniqueIndex;not null"`
     Username     string         `gorm:"size:100;not null"`
     PasswordHash string         `gorm:"size:255"`
-    GitHubID     *int64         `gorm:"index"`
-    GitHubLogin  *string        `gorm:"size:100"`
-    AvatarURL    *string        `gorm:"size:500"`
-    IsActive     bool           `gorm:"default:true"`
+    GitHubID          *int64         `gorm:"index"`
+    GitHubLogin       *string        `gorm:"size:100"`
+    AvatarURL         *string        `gorm:"size:500"`
+    GitHubAccessToken *string        `gorm:"size:255"` // Токен доступа к GitHub API
+    IsActive          bool           `gorm:"default:true"`
     CreatedAt    time.Time      `gorm:"autoCreateTime"`
     UpdatedAt    time.Time      `gorm:"autoUpdateTime"`
     DeletedAt    gorm.DeletedAt `gorm:"index"` // Soft Delete
