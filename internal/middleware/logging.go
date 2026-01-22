@@ -1,10 +1,11 @@
 package middleware
 
 import (
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/secure-review/internal/logger"
 )
 
 // Logger returns a logging middleware
@@ -25,18 +26,20 @@ func Logger() gin.HandlerFunc {
 			path = path + "?" + raw
 		}
 
-		log.Printf("[GIN] %s | %3d | %13v | %15s | %-7s %s",
-			time.Now().Format("2006/01/02 - 15:04:05"),
-			statusCode,
-			latency,
-			clientIP,
-			method,
-			path,
+		logger.Log.Info("Request",
+			slog.String("path", path),
+			slog.Int("status", statusCode),
+			slog.Duration("latency", latency),
+			slog.String("client_ip", clientIP),
+			slog.String("method", method),
 		)
 
 		if len(c.Errors) > 0 {
 			for _, e := range c.Errors {
-				log.Printf("[GIN] Error: %s", e.Error())
+				logger.Log.Error("Request error",
+					slog.String("error", e.Error()),
+					slog.String("path", path),
+				)
 			}
 		}
 	}
@@ -47,7 +50,9 @@ func Recovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Printf("[PANIC] %v", err)
+				logger.Log.Error("Panic recovered",
+					slog.Any("error", err),
+				)
 				c.AbortWithStatusJSON(500, gin.H{
 					"error": "Internal server error",
 				})

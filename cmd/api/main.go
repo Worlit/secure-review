@@ -12,6 +12,7 @@ import (
 	"github.com/secure-review/internal/config"
 	"github.com/secure-review/internal/database"
 	"github.com/secure-review/internal/handler"
+	"github.com/secure-review/internal/logger"
 	"github.com/secure-review/internal/middleware"
 	"github.com/secure-review/internal/repository"
 	"github.com/secure-review/internal/router"
@@ -27,26 +28,33 @@ func main() {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
+	// Initialize Logger
+	logger.Init(cfg.Log.Level, cfg.Log.Format)
+	logger.Info("Starting Secure Code Review API", "version", version)
+
 	// Connect to database using GORM (аналог TypeORM DataSource)
 	db, err := database.NewDatabase(cfg.Database.URL)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		logger.Error("Failed to connect to database", "error", err)
+		os.Exit(1)
 	}
 
 	sqlDB, err := db.DB.DB()
 	if err != nil {
-		log.Fatalf("Failed to get sql.DB: %v", err)
+		logger.Error("Failed to get sql.DB", "error", err)
+		os.Exit(1)
 	}
 	defer sqlDB.Close()
 
-	log.Println("Connected to database via GORM")
+	logger.Info("Connected to database via GORM")
 
 	// Run auto migrations (аналог TypeORM synchronize: true)
 	if err := db.AutoMigrate(); err != nil {
-		log.Fatalf("Failed to run auto migrations: %v", err)
+		logger.Error("Failed to run auto migrations", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Auto migrations completed")
+	logger.Info("Auto migrations completed")
 
 	// Initialize repositories with adapters (аналог getRepository() в TypeORM)
 	userRepo := repository.NewUserRepositoryAdapter(db.DB)
@@ -106,9 +114,10 @@ func main() {
 
 	// Start server in goroutine
 	go func() {
-		log.Printf("Starting server on %s", cfg.GetServerAddress())
+		logger.Info("Starting server", "address", cfg.GetServerAddress())
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
+			logger.Error("Failed to start server", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -117,15 +126,16 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down server...")
+	logger.Info("Shutting down server...")
 
 	// Graceful shutdown with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		logger.Error("Server forced to shutdown", "error", err)
+		os.Exit(1)
 	}
 
-	log.Println("Server exited properly")
+	logger.Info("Server exited properly")
 }

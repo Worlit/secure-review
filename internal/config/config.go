@@ -17,6 +17,7 @@ type Config struct {
 	GitHub    GitHubConfig
 	Frontend  FrontendConfig
 	RateLimit RateLimitConfig
+	Log       LogConfig
 }
 
 // ServerConfig holds server-related configuration
@@ -24,6 +25,12 @@ type ServerConfig struct {
 	Port string
 	Host string
 	Mode string
+}
+
+// LogConfig holds logging configuration
+type LogConfig struct {
+	Level  string
+	Format string
 }
 
 // DatabaseConfig holds database-related configuration
@@ -109,6 +116,10 @@ func Load() (*Config, error) {
 		RateLimit: RateLimitConfig{
 			Requests: rateLimitRequests,
 			Duration: rateLimitDuration,
+		},
+		Log: LogConfig{
+			Level:  getEnv("LOG_LEVEL", "info"),
+			Format: getEnv("LOG_FORMAT", "json"),
 		},
 	}
 

@@ -13,10 +13,11 @@ Backend API для анализа кода на безопасность с ис
 
 | Категория       | Технология                  |
 | --------------- | --------------------------- |
-| Язык            | Go 1.21+                    |
+| Язык            | Go 1.24+                    |
 | Web Framework   | Gin                         |
 | ORM             | GORM (TypeORM-подобный API) |
 | База данных     | PostgreSQL 14+              |
+| Логирование     | log/slog (JSON/Text)        |
 | AI              | OpenAI API (GPT-4)          |
 | Аутентификация  | JWT + GitHub OAuth 2.0      |
 | Контейнеризация | Docker, Docker Compose      |
@@ -40,6 +41,15 @@ go mod download
 go run cmd/api/main.go
 ```
 
+## Тестирование
+
+Проект содержит интеграционные тесты с использованием фейковых реализаций внешних зависимостей (БД, OpenAI).
+
+```bash
+# Запуск всех тестов
+go test -v ./tests/...
+```
+
 ## Структура проекта
 
 ```
@@ -51,10 +61,13 @@ secure-review/
 │   ├── domain/              # Интерфейсы и бизнес-правила
 │   ├── entity/              # GORM Entity (User, CodeReview, SecurityIssue)
 │   ├── handler/             # HTTP обработчики
+│   ├── logger/              # Настройка sLog
 │   ├── middleware/          # JWT auth, CORS, logging
 │   ├── repository/          # GORM репозитории
 │   ├── router/              # Gin роутинг
 │   └── service/             # Бизнес-логика
+├── tests/                   # Интеграционные и unit тесты
+│   └── fakes/               # Фейковые реализации для тестов
 └── docs/                    # Документация
 ```
 

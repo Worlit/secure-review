@@ -14,14 +14,14 @@ var _ domain.AuthService = (*AuthServiceImpl)(nil)
 type AuthServiceImpl struct {
 	userRepo       domain.UserRepository
 	passwordHasher domain.PasswordHasher
-	tokenGenerator *JWTTokenGenerator
+	tokenGenerator domain.TokenGenerator
 }
 
 // NewAuthService creates a new AuthServiceImpl
 func NewAuthService(
 	userRepo domain.UserRepository,
 	passwordHasher domain.PasswordHasher,
-	tokenGenerator *JWTTokenGenerator,
+	tokenGenerator domain.TokenGenerator,
 ) *AuthServiceImpl {
 	return &AuthServiceImpl{
 		userRepo:       userRepo,

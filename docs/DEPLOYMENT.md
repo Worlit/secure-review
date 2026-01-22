@@ -39,7 +39,7 @@ services:
   api:
     build: .
     ports:
-      - "8080:8080"
+      - '8080:8080'
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
@@ -48,6 +48,8 @@ services:
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
       - GITHUB_REDIRECT_URL=${GITHUB_REDIRECT_URL}
       - FRONTEND_URL=${FRONTEND_URL}
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
       - GIN_MODE=release
     depends_on:
       - postgres
@@ -62,7 +64,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - '5432:5432'
 
 volumes:
   postgres_data:
@@ -108,6 +110,10 @@ GITHUB_REDIRECT_URL=https://api.yourdomain.com/api/v1/auth/github/callback
 
 # Frontend
 FRONTEND_URL=https://yourdomain.com
+
+# Logging
+LOG_LEVEL=info # debug, info, warn, error
+LOG_FORMAT=json # json, text
 ```
 
 ## Health Checks
