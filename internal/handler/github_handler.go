@@ -35,15 +35,26 @@ func (h *GitHubHandler) GetAuthURL(c *gin.Context) {
 	state := generateState()
 
 	// Check if user is already authenticated to enable linking
+	var tokenString string
 	authHeader := c.GetHeader("Authorization")
 	if authHeader != "" {
 		parts := strings.Split(authHeader, " ")
 		if len(parts) == 2 && parts[0] == "Bearer" {
-			userID, err := h.tokenGenerator.ValidateToken(parts[1])
-			if err == nil {
-				// Set cookie to identify user during callback which happens on the same domain
-				c.SetCookie("github_link_user", userID.String(), 300, "/", "", false, true)
-			}
+			tokenString = parts[1]
+		}
+	} else {
+		// Try cookie
+		cookie, err := c.Cookie("access_token")
+		if err == nil {
+			tokenString = cookie
+		}
+	}
+
+	if tokenString != "" {
+		userID, err := h.tokenGenerator.ValidateToken(tokenString)
+		if err == nil {
+			// Set cookie to identify user during callback which happens on the same domain
+			c.SetCookie("github_link_user", userID.String(), 300, "/", "", false, true)
 		}
 	}
 
@@ -85,6 +96,13 @@ func (h *GitHubHandler) Callback(c *gin.Context) {
 				c.Redirect(http.StatusFound, h.frontendURL+"/login?error=token_generation_failed")
 				return
 			}
+
+			// Set auth cookie
+			c.SetCookie("access_token", token, 3600*24, "/", "", false, false)
+
+			// Redirect to profile for linked account
+			c.Redirect(http.StatusFound, h.frontendURL+"/profile?status=github_linked")
+			return
 		} else {
 			// Invalid user ID in cookie
 			c.Redirect(http.StatusFound, h.frontendURL+"/login?error=invalid_link_state")
