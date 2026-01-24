@@ -42,7 +42,7 @@ func (h *GitHubHandler) GetAuthURL(c *gin.Context) {
 			userID, err := h.tokenGenerator.ValidateToken(parts[1])
 			if err == nil {
 				// Set cookie to identify user during callback which happens on the same domain
-				c.SetCookie("github_link_user", userID.String(), 300, "/", "", false, true)
+				c.SetCookie("github_link_user", userID.String(), 300, "/", "", true, true)
 			}
 		}
 	}
