@@ -148,6 +148,48 @@ Authorization: Bearer <token>
 
 ---
 
+### GitHub Integration
+
+#### POST /auth/github/link
+
+Связать текущий аккаунт с GitHub.
+
+**Request Body:**
+
+```json
+{ "code": "github_oauth_code" }
+```
+
+#### DELETE /auth/github/link
+
+Отвязать GitHub аккаунт.
+
+#### GET /github/repos
+
+Список репозиториев (через GitHub App или OAuth).
+
+**Response:**
+
+```json
+[
+  {
+    "id": 123,
+    "name": "repo-name",
+    "full_name": "owner/repo-name",
+    "html_url": "https://github.com/...",
+    "private": true
+  }
+]
+```
+
+#### POST /github/webhook
+
+Обработка событий от GitHub App. Подпись проверяется автоматически.
+
+---
+
+### Code Reviews
+
 ### GitHub OAuth
 
 #### GET /auth/github

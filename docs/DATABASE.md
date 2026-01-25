@@ -67,7 +67,46 @@ type SecurityIssue struct {
 }
 ```
 
+### GitHubInstallation Entity
+
+```go
+// internal/entity/github_installation.go
+type GitHubInstallation struct {
+    ID             uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+    InstallationID int64          `gorm:"index;unique"` // ID установки от GitHub
+    AccountID      int64          `gorm:"index"`        // ID пользователя/организации GitHub
+    AccountLogin   string         `gorm:"size:255"`
+    AccountType    string         `gorm:"size:50"`      // "User" или "Organization"
+    UserID         *uuid.UUID     `gorm:"type:uuid;index"` // Связь с локальным пользователем
+    User           *User          `gorm:"foreignKey:UserID"`
+    CreatedAt      time.Time      `gorm:"autoCreateTime"`
+    UpdatedAt      time.Time      `gorm:"autoUpdateTime"`
+    DeletedAt      gorm.DeletedAt `gorm:"index"`
+}
+```
+
 ## Таблицы (SQL)
+
+### github_installations
+
+Таблица установок GitHub App.
+
+```sql
+CREATE TABLE github_installations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    installation_id BIGINT UNIQUE,
+    account_id BIGINT,
+    account_login VARCHAR(255),
+    account_type VARCHAR(50),
+    user_id UUID REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    deleted_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_github_installations_installation_id ON github_installations(installation_id);
+CREATE INDEX idx_github_installations_account_id ON github_installations(account_id);
+```
 
 ### users
 

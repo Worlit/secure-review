@@ -88,7 +88,7 @@ secure-review/
 - [Подробная документация](docs/README.md)
 - [API Reference](docs/API.md)
 - [Схема БД](docs/DATABASE.md)
-- [GitHub OAuth](docs/GITHUB_OAUTH.md)
+- [GitHub Integration](docs/GITHUB_INTEGRATION.md)
 - [Деплой](docs/DEPLOYMENT.md)
 
 ## Лицензия
