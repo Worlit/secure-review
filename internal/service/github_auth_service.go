@@ -26,6 +26,7 @@ type GitHubAuthServiceImpl struct {
 	oauth2Config   *oauth2.Config
 	userRepo       domain.UserRepository
 	tokenGenerator *JWTTokenGenerator
+	appService     domain.GitHubAppService
 }
 
 // NewGitHubAuthService creates a new GitHubAuthServiceImpl
@@ -33,6 +34,7 @@ func NewGitHubAuthService(
 	clientID, clientSecret, redirectURL string,
 	userRepo domain.UserRepository,
 	tokenGenerator *JWTTokenGenerator,
+	appService domain.GitHubAppService,
 ) *GitHubAuthServiceImpl {
 	return &GitHubAuthServiceImpl{
 		oauth2Config: &oauth2.Config{
@@ -44,6 +46,7 @@ func NewGitHubAuthService(
 		},
 		userRepo:       userRepo,
 		tokenGenerator: tokenGenerator,
+		appService:     appService,
 	}
 }
 
@@ -271,33 +274,51 @@ func (s *GitHubAuthServiceImpl) UnlinkAccount(ctx context.Context, userID uuid.U
 
 // ListRepositories lists repositories for the authenticated user
 func (s *GitHubAuthServiceImpl) ListRepositories(ctx context.Context, userID uuid.UUID) ([]domain.Repository, error) {
-	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
-		return nil, domain.ErrUserNotFound
-	}
-
-	if user.GitHubAccessToken == nil || *user.GitHubAccessToken == "" {
-		return nil, fmt.Errorf("GitHub account not linked or token missing")
-	}
-
-	client := googleGithub.NewClient(nil).WithAuthToken(*user.GitHubAccessToken)
-
-	opts := &googleGithub.RepositoryListByAuthenticatedUserOptions{
-		ListOptions: googleGithub.ListOptions{PerPage: 100},
-		Sort:        "updated",
-	}
-
 	var allRepos []*googleGithub.Repository
-	for {
-		repos, resp, err := client.Repositories.ListByAuthenticatedUser(ctx, opts)
+
+	// 1. Try App Installation
+	appClient, err := s.appService.GetClient(ctx, userID)
+	if err == nil {
+		// Use App API
+		opts := &googleGithub.ListOptions{PerPage: 100}
+		for {
+			repos, resp, err := appClient.Apps.ListRepos(ctx, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch installation repositories: %w", err)
+			}
+			allRepos = append(allRepos, repos.Repositories...)
+			if resp.NextPage == 0 {
+				break
+			}
+			opts.Page = resp.NextPage
+		}
+	} else {
+		// 2. Fallback to OAuth
+		user, err := s.userRepo.GetByID(ctx, userID)
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch repositories: %w", err)
+			return nil, domain.ErrUserNotFound
 		}
-		allRepos = append(allRepos, repos...)
-		if resp.NextPage == 0 {
-			break
+
+		if user.GitHubAccessToken == nil || *user.GitHubAccessToken == "" {
+			return nil, fmt.Errorf("GitHub account not linked or token missing")
 		}
-		opts.Page = resp.NextPage
+
+		client := googleGithub.NewClient(nil).WithAuthToken(*user.GitHubAccessToken)
+		opts := &googleGithub.RepositoryListByAuthenticatedUserOptions{
+			ListOptions: googleGithub.ListOptions{PerPage: 100},
+			Sort:        "updated",
+		}
+		for {
+			repos, resp, err := client.Repositories.ListByAuthenticatedUser(ctx, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to fetch repositories: %w", err)
+			}
+			allRepos = append(allRepos, repos...)
+			if resp.NextPage == 0 {
+				break
+			}
+			opts.Page = resp.NextPage
+		}
 	}
 
 	result := make([]domain.Repository, len(allRepos))
@@ -318,16 +339,23 @@ func (s *GitHubAuthServiceImpl) ListRepositories(ctx context.Context, userID uui
 
 // ListBranches lists branches for a repository
 func (s *GitHubAuthServiceImpl) ListBranches(ctx context.Context, userID uuid.UUID, owner, repo string) ([]string, error) {
-	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
-		return nil, domain.ErrUserNotFound
-	}
+	var client *googleGithub.Client
 
-	if user.GitHubAccessToken == nil || *user.GitHubAccessToken == "" {
-		return nil, fmt.Errorf("GitHub account not linked or token missing")
-	}
+	appClient, err := s.appService.GetClient(ctx, userID)
+	if err == nil {
+		client = appClient
+	} else {
+		user, err := s.userRepo.GetByID(ctx, userID)
+		if err != nil {
+			return nil, domain.ErrUserNotFound
+		}
 
-	client := googleGithub.NewClient(nil).WithAuthToken(*user.GitHubAccessToken)
+		if user.GitHubAccessToken == nil || *user.GitHubAccessToken == "" {
+			return nil, fmt.Errorf("GitHub account not linked or token missing")
+		}
+
+		client = googleGithub.NewClient(nil).WithAuthToken(*user.GitHubAccessToken)
+	}
 
 	opts := &googleGithub.BranchListOptions{
 		ListOptions: googleGithub.ListOptions{PerPage: 100},
@@ -358,16 +386,22 @@ func (s *GitHubAuthServiceImpl) ListBranches(ctx context.Context, userID uuid.UU
 
 // GetRepositoryContent fetches the repository content as a single string
 func (s *GitHubAuthServiceImpl) GetRepositoryContent(ctx context.Context, userID uuid.UUID, owner, repo, ref string) (string, error) {
-	user, err := s.userRepo.GetByID(ctx, userID)
-	if err != nil {
-		return "", domain.ErrUserNotFound
-	}
+	var client *googleGithub.Client
 
-	if user.GitHubAccessToken == nil || *user.GitHubAccessToken == "" {
-		return "", fmt.Errorf("GitHub account not linked or token missing")
-	}
+	appClient, err := s.appService.GetClient(ctx, userID)
+	if err == nil {
+		client = appClient
+	} else {
+		user, err := s.userRepo.GetByID(ctx, userID)
+		if err != nil {
+			return "", domain.ErrUserNotFound
+		}
 
-	client := googleGithub.NewClient(nil).WithAuthToken(*user.GitHubAccessToken)
+		if user.GitHubAccessToken == nil || *user.GitHubAccessToken == "" {
+			return "", fmt.Errorf("GitHub account not linked or token missing")
+		}
+		client = googleGithub.NewClient(nil).WithAuthToken(*user.GitHubAccessToken)
+	}
 
 	// Get archive link
 	opts := &googleGithub.RepositoryContentGetOptions{

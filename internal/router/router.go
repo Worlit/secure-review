@@ -83,6 +83,12 @@ func (r *Router) Setup() *gin.Engine {
 			auth.GET("/github/callback", r.githubHandler.Callback)
 		}
 
+		// GitHub Webhooks
+		githubPublic := api.Group("/github")
+		{
+			githubPublic.POST("/webhook", r.githubHandler.Webhook)
+		}
+
 		// Protected auth routes
 		authProtected := api.Group("/auth")
 		authProtected.Use(r.authMiddleware.RequireAuth())

@@ -52,9 +52,12 @@ type OpenAIConfig struct {
 
 // GitHubConfig holds GitHub OAuth configuration
 type GitHubConfig struct {
-	ClientID     string
-	ClientSecret string
-	RedirectURL  string
+	ClientID      string
+	ClientSecret  string
+	RedirectURL   string
+	AppID         int64
+	AppPrivateKey string
+	WebhookSecret string
 }
 
 // FrontendConfig holds frontend URL configuration
@@ -106,9 +109,12 @@ func Load() (*Config, error) {
 			Model:  getEnv("OPENAI_MODEL", "gpt-4"),
 		},
 		GitHub: GitHubConfig{
-			ClientID:     getEnv("GITHUB_CLIENT_ID", ""),
-			ClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
-			RedirectURL:  getEnv("GITHUB_REDIRECT_URL", "http://localhost:8080/api/v1/auth/github/callback"),
+			ClientID:      getEnv("GITHUB_CLIENT_ID", ""),
+			ClientSecret:  getEnv("GITHUB_CLIENT_SECRET", ""),
+			RedirectURL:   getEnv("GITHUB_REDIRECT_URL", "http://localhost:8080/api/v1/auth/github/callback"),
+			AppID:         getEnvAsInt("GITHUB_APP_ID", 0),
+			AppPrivateKey: getEnv("GITHUB_APP_PRIVATE_KEY", ""),
+			WebhookSecret: getEnv("GITHUB_WEBHOOK_SECRET", ""),
 		},
 		Frontend: FrontendConfig{
 			URL: getEnv("FRONTEND_URL", "http://localhost:3000"),
@@ -127,11 +133,23 @@ func Load() (*Config, error) {
 }
 
 // getEnv gets an environment variable or returns a default value
-func getEnv(key, defaultValue string) string {
+func getEnvAsInt(key string, defaultVal int64) int64 {
+	valueStr := getEnv(key, "")
+	if valueStr == "" {
+		return defaultVal
+	}
+	value, err := strconv.ParseInt(valueStr, 10, 64)
+	if err != nil {
+		return defaultVal
+	}
+	return value
+}
+
+func getEnv(key, defaultVal string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value
 	}
-	return defaultValue
+	return defaultVal
 }
 
 // GetServerAddress returns the full server address

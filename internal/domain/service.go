@@ -3,6 +3,7 @@ package domain
 import (
 	"context"
 
+	googleGithub "github.com/google/go-github/v69/github"
 	"github.com/google/uuid"
 )
 
@@ -26,6 +27,13 @@ type GitHubAuthService interface {
 	ListRepositories(ctx context.Context, userID uuid.UUID) ([]Repository, error)
 	ListBranches(ctx context.Context, userID uuid.UUID, owner, repo string) ([]string, error)
 	GetRepositoryContent(ctx context.Context, userID uuid.UUID, owner, repo, ref string) (string, error)
+}
+
+// GitHubAppService defines the interface for GitHub App operations
+type GitHubAppService interface {
+	HandleWebhook(ctx context.Context, payload []byte, eventType string) error
+	GetInstallationToken(ctx context.Context, installationID int64) (string, error)
+	GetClient(ctx context.Context, userID uuid.UUID) (*googleGithub.Client, error)
 }
 
 // Repository represents a GitHub repository

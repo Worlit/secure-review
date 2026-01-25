@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	googleGithub "github.com/google/go-github/v69/github"
 	"github.com/google/uuid"
 
 	"github.com/secure-review/internal/domain"
@@ -16,16 +17,26 @@ import (
 // GitHubHandler handles GitHub OAuth endpoints
 type GitHubHandler struct {
 	githubAuthService domain.GitHubAuthService
+	githubAppService  domain.GitHubAppService
 	tokenGenerator    domain.TokenGenerator
 	frontendURL       string
+	webhookSecret     []byte
 }
 
 // NewGitHubHandler creates a new GitHubHandler
-func NewGitHubHandler(githubAuthService domain.GitHubAuthService, tokenGenerator domain.TokenGenerator, frontendURL string) *GitHubHandler {
+func NewGitHubHandler(
+	githubAuthService domain.GitHubAuthService,
+	githubAppService domain.GitHubAppService,
+	tokenGenerator domain.TokenGenerator,
+	frontendURL string,
+	webhookSecret string,
+) *GitHubHandler {
 	return &GitHubHandler{
 		githubAuthService: githubAuthService,
+		githubAppService:  githubAppService,
 		tokenGenerator:    tokenGenerator,
 		frontendURL:       frontendURL,
+		webhookSecret:     []byte(webhookSecret),
 	}
 }
 
@@ -234,6 +245,24 @@ func (h *GitHubHandler) ListBranches(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, branches)
+}
+
+// Webhook handles GitHub App webhooks
+// POST /api/v1/github/webhook
+func (h *GitHubHandler) Webhook(c *gin.Context) {
+	payload, err := googleGithub.ValidatePayload(c.Request, h.webhookSecret)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid webhook signature"})
+		return
+	}
+
+	event := googleGithub.WebHookType(c.Request)
+	if err := h.githubAppService.HandleWebhook(c.Request.Context(), payload, event); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to handle webhook"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Webhook processed"})
 }
 
 func generateState() string {
