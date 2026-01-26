@@ -14,10 +14,12 @@ GitHub App является предпочтительным способом и
 1. Перейдите в [GitHub Developer Settings](https://github.com/settings/apps).
 2. Нажмите **"New GitHub App"**.
 3. Заполните основные поля:
-   - **GitHub App name**: `Secure Review (Dev)`
+   - **GitHub App name**: `Secure Review`
    - **Homepage URL**: `http://localhost:5173`
-   - **Callback URL**: `http://localhost:5173/auth/github/callback` (URL фронтенда!)
-   - **Webhook URL**: `http://localhost:8080/api/v1/github/webhook` (для локальной разработки используйте ngrok или аналоги)
+   - **Callback URL**:
+     - Вариант A (Frontend): `http://localhost:5173/auth/github/callback` (Рекомендуется)
+     - Вариант B (Backend): `http://localhost:8080/api/v1/auth/github/callback`
+   - **Webhook URL**: `http://localhost:8080/api/v1/github/webhook`
    - **Webhook Secret**: Генерируйте случайную строку (запишите её, она понадобится в `.env`).
 
 4. **Permissions (Права доступа):**
@@ -58,7 +60,10 @@ GITHUB_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 GITHUB_REDIRECT_URL=http://localhost:5173/auth/github/callback
 ```
 
-> **Важно:** `GITHUB_REDIRECT_URL` должен указывать на ваш **Frontend**, а не на Backend. Фронтенд принимает `code` и отправляет его POST-запросом на `/api/v1/auth/github/callback` бэкенда.
+> **Примечание:** `GITHUB_REDIRECT_URL` должен совпадать с тем, что указан в настройках GitHub App (Callback URL).
+
+- Если используете Frontend-first подход (рекомендуемый), укажите URL фронтенда.
+- Если используете прямой редирект на бэкенд, укажите URL бэкенда (`.../api/v1/auth/github/callback`).
 
 ## 3. Установка приложения
 

@@ -114,6 +114,34 @@ func (h *GitHubHandler) Callback(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// CallbackRedirect handles the GitHub OAuth callback via browser redirect (GET)
+// GET /api/auth/github/callback
+func (h *GitHubHandler) CallbackRedirect(c *gin.Context) {
+	code := c.Query("code")
+	if code == "" {
+		c.Redirect(http.StatusFound, h.frontendURL+"/login?error=no_code")
+		return
+	}
+
+	response, err := h.githubAuthService.AuthenticateOrCreate(c.Request.Context(), code)
+	if err != nil {
+		logger.Log.Error("GitHub authentication failed (GET)", "error", err)
+		c.Redirect(http.StatusFound, h.frontendURL+"/login?error=auth_failed")
+		return
+	}
+
+	// Set auth cookie
+	if h.isProduction {
+		c.SetSameSite(http.SameSiteNoneMode)
+	} else {
+		c.SetSameSite(http.SameSiteLaxMode)
+	}
+	c.SetCookie("access_token", response.Token, 3600*24, "/", "", h.isProduction, true)
+
+	// Redirect to frontend (home or dashboard)
+	c.Redirect(http.StatusFound, h.frontendURL)
+}
+
 // LinkAccount links GitHub account to existing user
 // POST /api/auth/github/link
 func (h *GitHubHandler) LinkAccount(c *gin.Context) {

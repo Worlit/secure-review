@@ -81,6 +81,7 @@ func (r *Router) Setup() *gin.Engine {
 			// GitHub OAuth
 			auth.GET("/github", r.githubHandler.GetAuthURL)
 			auth.POST("/github/callback", r.githubHandler.Callback)
+			auth.GET("/github/callback", r.githubHandler.CallbackRedirect) // Обработка редиректа от GitHub (Plan B)
 		}
 
 		// GitHub Webhooks
