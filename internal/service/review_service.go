@@ -37,20 +37,17 @@ func NewReviewService(
 func (s *ReviewServiceImpl) Create(ctx context.Context, userID uuid.UUID, input *domain.CreateReviewInput) (*domain.ReviewResponse, error) {
 	var code string
 	var language string
+	var repoOwner, repoName, repoBranch *string
 
 	// Handle GitHub repository source
 	if input.RepoName != nil && input.RepoOwner != nil && input.RepoBranch != nil {
-		content, err := s.githubAuthService.GetRepositoryContent(
-			ctx,
-			userID,
-			*input.RepoOwner,
-			*input.RepoName,
-			*input.RepoBranch,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch repository content: %w", err)
-		}
-		code = content
+		repoOwner = input.RepoOwner
+		repoName = input.RepoName
+		repoBranch = input.RepoBranch
+
+		// Set placeholder for now
+		code = "Repository content is being downloaded..."
+
 		// Try to infer language if not provided, or just set as Mixed/Repo
 		if input.Language != "" {
 			language = input.Language
@@ -72,7 +69,7 @@ func (s *ReviewServiceImpl) Create(ctx context.Context, userID uuid.UUID, input 
 		ID:           uuid.New(),
 		UserID:       userID,
 		Title:        input.Title,
-		Code:         code,
+		Code:         code, // Will be updated if it's a repo
 		Language:     language,
 		Status:       domain.ReviewStatusPending,
 		CustomPrompt: input.CustomPrompt,
@@ -84,8 +81,8 @@ func (s *ReviewServiceImpl) Create(ctx context.Context, userID uuid.UUID, input 
 		return nil, err
 	}
 
-	// Start async analysis
-	go s.analyzeCode(context.Background(), review)
+	// Start async analysis with repo details check
+	go s.analyzeCode(context.Background(), review, repoOwner, repoName, repoBranch)
 
 	return review.ToResponse(nil), nil
 }
@@ -186,15 +183,37 @@ func (s *ReviewServiceImpl) ReanalyzeReview(ctx context.Context, userID uuid.UUI
 	}
 
 	// Start async analysis
-	go s.analyzeCode(context.Background(), review)
+	go s.analyzeCode(context.Background(), review, nil, nil, nil)
 
 	return review.ToResponse(nil), nil
 }
 
-func (s *ReviewServiceImpl) analyzeCode(ctx context.Context, review *domain.CodeReview) {
+func (s *ReviewServiceImpl) analyzeCode(ctx context.Context, review *domain.CodeReview, repoOwner, repoName, repoBranch *string) {
 	review.Status = domain.ReviewStatusProcessing
 	review.UpdatedAt = time.Now()
 	_ = s.reviewRepo.Update(ctx, review)
+
+	// Fetch repository content if necessary
+	if repoOwner != nil && repoName != nil && repoBranch != nil {
+		content, err := s.githubAuthService.GetRepositoryContent(
+			ctx,
+			review.UserID,
+			*repoOwner,
+			*repoName,
+			*repoBranch,
+		)
+		if err != nil {
+			review.Status = domain.ReviewStatusFailed
+			errorMsg := fmt.Sprintf("Failed to fetch repository: %v", err)
+			review.Result = &errorMsg
+			review.UpdatedAt = time.Now()
+			_ = s.reviewRepo.Update(ctx, review)
+			return
+		}
+		review.Code = content
+		// Update Code in DB immediately
+		_ = s.reviewRepo.Update(ctx, review)
+	}
 
 	result, err := s.codeAnalyzer.AnalyzeCode(ctx, &domain.AnalysisRequest{
 		Code:         review.Code,

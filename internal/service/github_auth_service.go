@@ -513,7 +513,23 @@ func shouldSkipFile(path string) bool {
 		strings.Contains(path, ".idea/") ||
 		strings.Contains(path, ".vscode/") ||
 		strings.Contains(path, "dist/") ||
-		strings.Contains(path, "build/") {
+		strings.Contains(path, "build/") ||
+		strings.Contains(path, "coverage/") ||
+		strings.Contains(path, "tmp/") ||
+		strings.Contains(path, "__pycache__/") {
+		return true
+	}
+
+	// Skip specific large or non-source files
+	fileName := strings.ToLower(filepath.Base(path))
+	if fileName == "package-lock.json" ||
+		fileName == "yarn.lock" ||
+		fileName == "pnpm-lock.yaml" ||
+		fileName == "go.sum" ||
+		fileName == "cargo.lock" ||
+		strings.HasSuffix(fileName, ".map") ||
+		strings.HasSuffix(fileName, ".min.js") ||
+		strings.HasSuffix(fileName, ".min.css") {
 		return true
 	}
 

@@ -15,11 +15,11 @@ type User struct {
     Email        string         `gorm:"size:255;uniqueIndex;not null"`
     Username     string         `gorm:"size:100;not null"`
     PasswordHash string         `gorm:"size:255"`
-    GitHubID          *int64         `gorm:"index"`
-    GitHubLogin       *string        `gorm:"size:100"`
-    AvatarURL         *string        `gorm:"size:500"`
-    GitHubAccessToken *string        `gorm:"size:255"` // Токен доступа к GitHub API
-    IsActive          bool           `gorm:"default:true"`
+    GitHubID          *int64  `gorm:"column:github_id;index"`
+    GitHubLogin       *string `gorm:"column:github_login;size:100"`
+    AvatarURL         *string `gorm:"column:avatar_url;size:500"`
+    GitHubAccessToken *string `gorm:"column:github_access_token;size:255"` // Токен доступа к GitHub API
+    IsActive          bool    `gorm:"default:true"`
     CreatedAt    time.Time      `gorm:"autoCreateTime"`
     UpdatedAt    time.Time      `gorm:"autoUpdateTime"`
     DeletedAt    gorm.DeletedAt `gorm:"index"` // Soft Delete
@@ -118,9 +118,10 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(50) NOT NULL,
     password_hash VARCHAR(255),
-    github_id BIGINT UNIQUE,
-    github_login VARCHAR(255),
-    avatar_url TEXT,
+    github_id BIGINT,
+    github_login VARCHAR(100),
+    avatar_url VARCHAR(500),
+    github_access_token VARCHAR(255),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL

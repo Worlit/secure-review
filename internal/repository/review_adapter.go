@@ -105,31 +105,33 @@ func (a *ReviewRepositoryAdapter) DeleteSecurityIssuesByReviewID(ctx context.Con
 
 func domainReviewToEntity(review *domain.CodeReview) *entity.CodeReview {
 	return &entity.CodeReview{
-		ID:          review.ID,
-		UserID:      review.UserID,
-		Title:       review.Title,
-		Code:        review.Code,
-		Language:    review.Language,
-		Status:      entity.ReviewStatus(review.Status),
-		Result:      review.Result,
-		CreatedAt:   review.CreatedAt,
-		UpdatedAt:   review.UpdatedAt,
-		CompletedAt: review.CompletedAt,
+		ID:           review.ID,
+		UserID:       review.UserID,
+		Title:        review.Title,
+		Code:         review.Code,
+		Language:     review.Language,
+		Status:       entity.ReviewStatus(review.Status),
+		Result:       review.Result,
+		CustomPrompt: review.CustomPrompt,
+		CreatedAt:    review.CreatedAt,
+		UpdatedAt:    review.UpdatedAt,
+		CompletedAt:  review.CompletedAt,
 	}
 }
 
 func entityReviewToDomain(review *entity.CodeReview) *domain.CodeReview {
 	return &domain.CodeReview{
-		ID:          review.ID,
-		UserID:      review.UserID,
-		Title:       review.Title,
-		Code:        review.Code,
-		Language:    review.Language,
-		Status:      domain.ReviewStatus(review.Status),
-		Result:      review.Result,
-		CreatedAt:   review.CreatedAt,
-		UpdatedAt:   review.UpdatedAt,
-		CompletedAt: review.CompletedAt,
+		ID:           review.ID,
+		UserID:       review.UserID,
+		Title:        review.Title,
+		Code:         review.Code,
+		Language:     review.Language,
+		Status:       domain.ReviewStatus(review.Status),
+		Result:       review.Result,
+		CustomPrompt: review.CustomPrompt,
+		CreatedAt:    review.CreatedAt,
+		UpdatedAt:    review.UpdatedAt,
+		CompletedAt:  review.CompletedAt,
 	}
 }
 
