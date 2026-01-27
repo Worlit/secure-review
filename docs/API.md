@@ -148,6 +148,48 @@ Authorization: Bearer <token>
 
 ---
 
+### GitHub Integration
+
+#### POST /auth/github/link
+
+Связать текущий аккаунт с GitHub.
+
+**Request Body:**
+
+```json
+{ "code": "github_oauth_code" }
+```
+
+#### DELETE /auth/github/link
+
+Отвязать GitHub аккаунт.
+
+#### GET /github/repos
+
+Список репозиториев (через GitHub App или OAuth).
+
+**Response:**
+
+```json
+[
+  {
+    "id": 123,
+    "name": "repo-name",
+    "full_name": "owner/repo-name",
+    "html_url": "https://github.com/...",
+    "private": true
+  }
+]
+```
+
+#### POST /github/webhook
+
+Обработка событий от GitHub App. Подпись проверяется автоматически.
+
+---
+
+### Code Reviews
+
 ### GitHub OAuth
 
 #### GET /auth/github
@@ -171,8 +213,9 @@ Authorization: Bearer <token>
 
 #### GET /auth/github/callback
 
-Callback endpoint для GitHub OAuth. Принимает код от GitHub and перенаправляет на Frontend.
-Устанавливает cookie `access_token`.
+Callback endpoint для GitHub OAuth (Plan B: Backend Redirect).
+Используется, если GitHub настроен на редирект непосредственно на бэкенд.
+Устанавливает сессионную cookie `access_token` и перенаправляет на главную страницу фронтенда.
 
 **Query Parameters:**
 
@@ -181,10 +224,33 @@ Callback endpoint для GitHub OAuth. Принимает код от GitHub and
 
 **Response (302 Found):**
 
-Редирект на URL фронтенда:
+Редирект на `FRONTEND_URL`.
 
-- Успех: `{FRONTEND_URL}/login?token=<jwt_token>` (Cookie `access_token` также устанавливается)
-- Ошибка: `{FRONTEND_URL}/login?error=<reason>` (например: `auth_failed`, `link_failed`)
+---
+
+#### POST /auth/github/callback
+
+Callback endpoint для GitHub OAuth (Plan A: Frontend-first).
+Используется, если GitHub редиректит на фронтенд, и фронтенд отправляет `code` на бэкенд.
+Устанавливает сессионную cookie `access_token`.
+
+**Request Body:**
+
+```json
+{
+  "code": "github_auth_code",
+  "state": "optional_state"
+}
+```
+
+**Response (200 OK):**
+
+```json
+{
+  "token": "eyJhbGci...",
+  "user": { ... }
+}
+```
 
 ---
 

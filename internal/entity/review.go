@@ -44,6 +44,9 @@ type CodeReview struct {
 	Status   ReviewStatus `gorm:"size:20;default:'pending'" json:"status"`
 	Result   *string      `gorm:"type:text" json:"result,omitempty"`
 
+	// CustomPrompt - allows user to guide the review
+	CustomPrompt *string `gorm:"type:text" json:"custom_prompt,omitempty"`
+
 	// Timestamps - аналог @CreateDateColumn(), @UpdateDateColumn()
 	CreatedAt   time.Time      `gorm:"autoCreateTime" json:"created_at"`
 	UpdatedAt   time.Time      `gorm:"autoUpdateTime" json:"updated_at"`

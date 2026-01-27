@@ -22,10 +22,10 @@ type User struct {
 	PasswordHash string `gorm:"size:255" json:"-"`
 
 	// GitHub integration - nullable columns - аналог @Column({ nullable: true })
-	GitHubID          *int64  `gorm:"index" json:"github_id,omitempty"`
-	GitHubLogin       *string `gorm:"size:100" json:"github_login,omitempty"`
-	AvatarURL         *string `gorm:"size:500" json:"avatar_url,omitempty"`
-	GitHubAccessToken *string `gorm:"size:255" json:"-"`
+	GitHubID          *int64  `gorm:"column:github_id;index" json:"github_id,omitempty"`
+	GitHubLogin       *string `gorm:"column:github_login;size:100" json:"github_login,omitempty"`
+	AvatarURL         *string `gorm:"column:avatar_url;size:500" json:"avatar_url,omitempty"`
+	GitHubAccessToken *string `gorm:"column:github_access_token;size:255" json:"-"`
 
 	// Active flag - аналог @Column({ default: true })
 	IsActive bool `gorm:"default:true" json:"is_active"`

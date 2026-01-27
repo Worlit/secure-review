@@ -46,6 +46,9 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		return
 	}
 
+	// Set access token in cookie
+	c.SetCookie("access_token", response.Token, 3600*24, "/", "", false, false)
+
 	c.JSON(http.StatusCreated, response)
 }
 
@@ -73,6 +76,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		})
 		return
 	}
+
+	// Set access token in cookie
+	c.SetCookie("access_token", response.Token, 3600*24, "/", "", false, false)
 
 	c.JSON(http.StatusOK, response)
 }

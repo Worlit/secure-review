@@ -80,7 +80,14 @@ func (r *Router) Setup() *gin.Engine {
 
 			// GitHub OAuth
 			auth.GET("/github", r.githubHandler.GetAuthURL)
-			auth.GET("/github/callback", r.githubHandler.Callback)
+			auth.POST("/github/callback", r.githubHandler.Callback)
+			auth.GET("/github/callback", r.githubHandler.CallbackRedirect) // Обработка редиректа от GitHub (Plan B)
+		}
+
+		// GitHub Webhooks
+		githubPublic := api.Group("/github")
+		{
+			githubPublic.POST("/webhook", r.githubHandler.Webhook)
 		}
 
 		// Protected auth routes
@@ -108,6 +115,7 @@ func (r *Router) Setup() *gin.Engine {
 		gh.Use(r.authMiddleware.RequireAuth())
 		{
 			gh.GET("/repos", r.githubHandler.ListRepositories)
+			gh.GET("/repos/:owner/:repo/branches", r.githubHandler.ListBranches)
 		}
 
 		// Review routes (auth required)

@@ -29,16 +29,17 @@ const (
 
 // CodeReview represents a code review request and its results
 type CodeReview struct {
-	ID          uuid.UUID    `json:"id"`
-	UserID      uuid.UUID    `json:"user_id"`
-	Title       string       `json:"title"`
-	Code        string       `json:"code"`
-	Language    string       `json:"language"`
-	Status      ReviewStatus `json:"status"`
-	Result      *string      `json:"result,omitempty"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
-	CompletedAt *time.Time   `json:"completed_at,omitempty"`
+	ID           uuid.UUID    `json:"id"`
+	UserID       uuid.UUID    `json:"user_id"`
+	Title        string       `json:"title"`
+	Code         string       `json:"code"`
+	Language     string       `json:"language"`
+	Status       ReviewStatus `json:"status"`
+	Result       *string      `json:"result,omitempty"`
+	CustomPrompt *string      `json:"custom_prompt,omitempty"`
+	CreatedAt    time.Time    `json:"created_at"`
+	UpdatedAt    time.Time    `json:"updated_at"`
+	CompletedAt  *time.Time   `json:"completed_at,omitempty"`
 }
 
 // SecurityIssue represents a security vulnerability found in code
@@ -57,9 +58,13 @@ type SecurityIssue struct {
 
 // CreateReviewInput represents input for creating a new code review
 type CreateReviewInput struct {
-	Title    string `json:"title" binding:"required,min=1,max=255"`
-	Code     string `json:"code" binding:"required"`
-	Language string `json:"language" binding:"required"`
+	Title        string  `json:"title" binding:"required,min=1,max=255"`
+	Code         *string `json:"code,omitempty"`
+	Language     string  `json:"language"`
+	RepoOwner    *string `json:"repo_owner,omitempty"`
+	RepoName     *string `json:"repo_name,omitempty"`
+	RepoBranch   *string `json:"repo_branch,omitempty"`
+	CustomPrompt *string `json:"custom_prompt,omitempty"`
 }
 
 // ReviewResponse represents the response for a code review
@@ -71,6 +76,7 @@ type ReviewResponse struct {
 	Language       string          `json:"language"`
 	Status         ReviewStatus    `json:"status"`
 	Result         *string         `json:"result,omitempty"`
+	CustomPrompt   *string         `json:"custom_prompt,omitempty"`
 	SecurityIssues []SecurityIssue `json:"security_issues,omitempty"`
 	CreatedAt      time.Time       `json:"created_at"`
 	CompletedAt    *time.Time      `json:"completed_at,omitempty"`
@@ -86,6 +92,7 @@ func (r *CodeReview) ToResponse(issues []SecurityIssue) *ReviewResponse {
 		Language:       r.Language,
 		Status:         r.Status,
 		Result:         r.Result,
+		CustomPrompt:   r.CustomPrompt,
 		SecurityIssues: issues,
 		CreatedAt:      r.CreatedAt,
 		CompletedAt:    r.CompletedAt,
@@ -103,8 +110,9 @@ type ReviewListResponse struct {
 
 // AnalysisRequest represents the request to OpenAI for code analysis
 type AnalysisRequest struct {
-	Code     string `json:"code"`
-	Language string `json:"language"`
+	Code         string  `json:"code"`
+	Language     string  `json:"language"`
+	CustomPrompt *string `json:"custom_prompt,omitempty"`
 }
 
 // AnalysisResult represents the result from OpenAI code analysis

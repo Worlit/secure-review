@@ -26,11 +26,17 @@ func NewOpenAICodeAnalyzer(apiKey string) *OpenAICodeAnalyzer {
 
 // AnalyzeCode performs code review using OpenAI
 func (a *OpenAICodeAnalyzer) AnalyzeCode(ctx context.Context, request *domain.AnalysisRequest) (*domain.AnalysisResult, error) {
-	prompt := fmt.Sprintf(`You are an expert code reviewer. Analyze the following %s code and provide:
+	basePrompt := fmt.Sprintf(`You are an expert code reviewer. Analyze the following %s code and provide:
 1. A brief summary of what the code does
 2. Any security vulnerabilities found (with severity: critical, high, medium, low, info)
 3. Code quality suggestions for improvement
-4. An overall quality score from 0-100
+4. An overall quality score from 0-100`, request.Language)
+
+	if request.CustomPrompt != nil && *request.CustomPrompt != "" {
+		basePrompt += fmt.Sprintf("\n\nUser specific instructions: %s", *request.CustomPrompt)
+	}
+
+	prompt := fmt.Sprintf(`%s
 
 Code to review:
 %s
@@ -51,7 +57,7 @@ Respond in JSON format with this structure:
   ],
   "suggestions": ["string"],
   "overall_score": number
-}`, request.Language, request.Code)
+}`, basePrompt, request.Code)
 
 	resp, err := a.client.CreateChatCompletion(ctx, openai.ChatCompletionRequest{
 		Model: openai.GPT4TurboPreview,

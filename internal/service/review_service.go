@@ -15,37 +15,74 @@ var _ domain.ReviewService = (*ReviewServiceImpl)(nil)
 
 // ReviewServiceImpl implements the ReviewService interface
 type ReviewServiceImpl struct {
-	reviewRepo   domain.ReviewRepository
-	codeAnalyzer domain.CodeAnalyzer
+	reviewRepo        domain.ReviewRepository
+	codeAnalyzer      domain.CodeAnalyzer
+	githubAuthService domain.GitHubAuthService
 }
 
 // NewReviewService creates a new ReviewServiceImpl
-func NewReviewService(reviewRepo domain.ReviewRepository, codeAnalyzer domain.CodeAnalyzer) *ReviewServiceImpl {
+func NewReviewService(
+	reviewRepo domain.ReviewRepository,
+	codeAnalyzer domain.CodeAnalyzer,
+	githubAuthService domain.GitHubAuthService,
+) *ReviewServiceImpl {
 	return &ReviewServiceImpl{
-		reviewRepo:   reviewRepo,
-		codeAnalyzer: codeAnalyzer,
+		reviewRepo:        reviewRepo,
+		codeAnalyzer:      codeAnalyzer,
+		githubAuthService: githubAuthService,
 	}
 }
 
 // Create creates a new code review
 func (s *ReviewServiceImpl) Create(ctx context.Context, userID uuid.UUID, input *domain.CreateReviewInput) (*domain.ReviewResponse, error) {
+	var code string
+	var language string
+	var repoOwner, repoName, repoBranch *string
+
+	// Handle GitHub repository source
+	if input.RepoName != nil && input.RepoOwner != nil && input.RepoBranch != nil {
+		repoOwner = input.RepoOwner
+		repoName = input.RepoName
+		repoBranch = input.RepoBranch
+
+		// Set placeholder for now
+		code = "Repository content is being downloaded..."
+
+		// Try to infer language if not provided, or just set as Mixed/Repo
+		if input.Language != "" {
+			language = input.Language
+		} else {
+			language = "Mixed (Repository)"
+		}
+	} else if input.Code != nil {
+		code = *input.Code
+		language = input.Language
+	} else {
+		return nil, fmt.Errorf("either code or repository details must be provided")
+	}
+
+	if code == "" {
+		return nil, fmt.Errorf("code content is empty")
+	}
+
 	review := &domain.CodeReview{
-		ID:        uuid.New(),
-		UserID:    userID,
-		Title:     input.Title,
-		Code:      input.Code,
-		Language:  input.Language,
-		Status:    domain.ReviewStatusPending,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:           uuid.New(),
+		UserID:       userID,
+		Title:        input.Title,
+		Code:         code, // Will be updated if it's a repo
+		Language:     language,
+		Status:       domain.ReviewStatusPending,
+		CustomPrompt: input.CustomPrompt,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
 	if err := s.reviewRepo.Create(ctx, review); err != nil {
 		return nil, err
 	}
 
-	// Start async analysis
-	go s.analyzeCode(context.Background(), review)
+	// Start async analysis with repo details check
+	go s.analyzeCode(context.Background(), review, repoOwner, repoName, repoBranch)
 
 	return review.ToResponse(nil), nil
 }
@@ -146,19 +183,42 @@ func (s *ReviewServiceImpl) ReanalyzeReview(ctx context.Context, userID uuid.UUI
 	}
 
 	// Start async analysis
-	go s.analyzeCode(context.Background(), review)
+	go s.analyzeCode(context.Background(), review, nil, nil, nil)
 
 	return review.ToResponse(nil), nil
 }
 
-func (s *ReviewServiceImpl) analyzeCode(ctx context.Context, review *domain.CodeReview) {
+func (s *ReviewServiceImpl) analyzeCode(ctx context.Context, review *domain.CodeReview, repoOwner, repoName, repoBranch *string) {
 	review.Status = domain.ReviewStatusProcessing
 	review.UpdatedAt = time.Now()
 	_ = s.reviewRepo.Update(ctx, review)
 
+	// Fetch repository content if necessary
+	if repoOwner != nil && repoName != nil && repoBranch != nil {
+		content, err := s.githubAuthService.GetRepositoryContent(
+			ctx,
+			review.UserID,
+			*repoOwner,
+			*repoName,
+			*repoBranch,
+		)
+		if err != nil {
+			review.Status = domain.ReviewStatusFailed
+			errorMsg := fmt.Sprintf("Failed to fetch repository: %v", err)
+			review.Result = &errorMsg
+			review.UpdatedAt = time.Now()
+			_ = s.reviewRepo.Update(ctx, review)
+			return
+		}
+		review.Code = content
+		// Update Code in DB immediately
+		_ = s.reviewRepo.Update(ctx, review)
+	}
+
 	result, err := s.codeAnalyzer.AnalyzeCode(ctx, &domain.AnalysisRequest{
-		Code:     review.Code,
-		Language: review.Language,
+		Code:         review.Code,
+		Language:     review.Language,
+		CustomPrompt: review.CustomPrompt,
 	})
 
 	if err != nil {

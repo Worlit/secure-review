@@ -29,3 +29,14 @@ type ReviewRepository interface {
 	GetSecurityIssuesByReviewID(ctx context.Context, reviewID uuid.UUID) ([]SecurityIssue, error)
 	DeleteSecurityIssuesByReviewID(ctx context.Context, reviewID uuid.UUID) error
 }
+
+// GitHubInstallationRepository defines the interface for GitHub installation data access
+type GitHubInstallationRepository interface {
+	Create(ctx context.Context, installation *GitHubInstallation) error
+	GetByInstallationID(ctx context.Context, installationID int64) (*GitHubInstallation, error)
+	GetByUserID(ctx context.Context, userID uuid.UUID) (*GitHubInstallation, error)
+	GetByAccountID(ctx context.Context, accountID int64) (*GitHubInstallation, error)
+	Update(ctx context.Context, installation *GitHubInstallation) error
+	Delete(ctx context.Context, id uuid.UUID) error
+	DeleteByInstallationID(ctx context.Context, installationID int64) error
+}

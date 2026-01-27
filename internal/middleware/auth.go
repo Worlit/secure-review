@@ -25,25 +25,30 @@ func NewAuthMiddleware(authService domain.AuthService) *AuthMiddleware {
 // RequireAuth middleware that requires authentication
 func (m *AuthMiddleware) RequireAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		var token string
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		if authHeader != "" {
+			parts := strings.SplitN(authHeader, " ", 2)
+			if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+				token = parts[1]
+			}
+		}
+
+		// Try cookie if header is missing
+		if token == "" {
+			cookie, err := c.Cookie("access_token")
+			if err == nil {
+				token = cookie
+			}
+		}
+
+		if token == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Authorization header required",
+				"error": "Authorization required",
 			})
 			c.Abort()
 			return
 		}
-
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "Invalid authorization header format",
-			})
-			c.Abort()
-			return
-		}
-
-		token := parts[1]
 
 		userID, err := m.authService.ValidateToken(token)
 		if err != nil {

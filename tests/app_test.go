@@ -30,7 +30,8 @@ func SetupApp() *gin.Engine {
 
 	// Initialize Services
 	authService := service.NewAuthService(userRepo, hasher, tokenGen)
-	reviewService := service.NewReviewService(reviewRepo, analyzer)
+	githubService := fakes.NewFakeGitHubAuthService()
+	reviewService := service.NewReviewService(reviewRepo, analyzer, githubService)
 	userService := service.NewUserService(userRepo)
 
 	// Mocks for unused services in this test suite
@@ -150,8 +151,9 @@ func TestAuthFlowAndReview(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// 3. Create Review
+	code := "func main() { fmt.Println(\"Hello\") }"
 	reviewPayload := domain.CreateReviewInput{
-		Code:     "func main() { fmt.Println(\"Hello\") }",
+		Code:     &code,
 		Language: "go",
 		Title:    "Test Review",
 	}
@@ -168,7 +170,7 @@ func TestAuthFlowAndReview(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &reviewResp)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, reviewResp.ID)
-	assert.Equal(t, reviewPayload.Code, reviewResp.Code)
+	assert.Equal(t, *reviewPayload.Code, reviewResp.Code)
 
 	// Since analysis is async, we need to wait and fetch again
 	time.Sleep(100 * time.Millisecond)
