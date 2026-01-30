@@ -70,12 +70,28 @@ func (r *Router) Setup() *gin.Engine {
 
 	// CORS setup
 	allowOrigins := strings.Split(r.config.Frontend.URL, ",")
-	for i := range allowOrigins {
-		allowOrigins[i] = strings.TrimSpace(allowOrigins[i])
+	var cleanOrigins []string
+	for _, origin := range allowOrigins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed != "" {
+			cleanOrigins = append(cleanOrigins, trimmed)
+		}
+	}
+
+	// Add localhost for development if not present
+	hasLocalhost := false
+	for _, origin := range cleanOrigins {
+		if origin == "http://localhost:3000" {
+			hasLocalhost = true
+			break
+		}
+	}
+	if !hasLocalhost {
+		cleanOrigins = append(cleanOrigins, "http://localhost:3000")
 	}
 
 	engine.Use(cors.New(cors.Config{
-		AllowOrigins:     allowOrigins,
+		AllowOrigins:     cleanOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "Accept", "Cache-Control", "X-Requested-With"},
 		ExposeHeaders:    []string{"Content-Length", "Content-Type"},
