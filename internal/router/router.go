@@ -2,6 +2,7 @@ package router
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -68,8 +69,13 @@ func (r *Router) Setup() *gin.Engine {
 	})
 
 	// CORS setup
+	allowOrigins := strings.Split(r.config.Frontend.URL, ",")
+	for i := range allowOrigins {
+		allowOrigins[i] = strings.TrimSpace(allowOrigins[i])
+	}
+
 	engine.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{r.config.Frontend.URL},
+		AllowOrigins:     allowOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Content-Length", "Accept-Encoding", "X-CSRF-Token", "Authorization", "Accept", "Cache-Control", "X-Requested-With"},
 		ExposeHeaders:    []string{"Content-Length", "Content-Type"},

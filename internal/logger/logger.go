@@ -4,6 +4,8 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/lmittmann/tint"
 )
 
 var Log *slog.Logger
@@ -24,15 +26,15 @@ func Init(level, format string) {
 		logLevel = slog.LevelInfo
 	}
 
-	opts := &slog.HandlerOptions{
-		Level: logLevel,
-	}
-
 	var handler slog.Handler
 	if strings.ToLower(format) == "json" {
-		handler = slog.NewJSONHandler(os.Stdout, opts)
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: logLevel,
+		})
 	} else {
-		handler = slog.NewTextHandler(os.Stdout, opts)
+		handler = tint.NewHandler(os.Stdout, &tint.Options{
+			Level: logLevel,
+		})
 	}
 
 	Log = slog.New(handler)
