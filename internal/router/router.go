@@ -159,6 +159,7 @@ func (r *Router) Setup() *gin.Engine {
 			reviews.POST("", r.reviewHandler.CreateReview)
 			reviews.GET("", r.reviewHandler.ListReviews)
 			reviews.GET("/:id", r.reviewHandler.GetReview)
+			reviews.GET("/:id/pdf", r.reviewHandler.GetReviewPDF)
 			reviews.DELETE("/:id", r.reviewHandler.DeleteReview)
 			reviews.POST("/:id/reanalyze", r.reviewHandler.ReanalyzeReview)
 		}

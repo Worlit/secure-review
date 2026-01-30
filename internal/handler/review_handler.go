@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -10,17 +11,20 @@ import (
 	"github.com/secure-review/internal/domain"
 	"github.com/secure-review/internal/logger"
 	"github.com/secure-review/internal/middleware"
+	"github.com/secure-review/internal/service"
 )
 
 // ReviewHandler handles code review endpoints
 type ReviewHandler struct {
 	reviewService domain.ReviewService
+	pdfService    *service.PDFService
 }
 
 // NewReviewHandler creates a new ReviewHandler
 func NewReviewHandler(reviewService domain.ReviewService) *ReviewHandler {
 	return &ReviewHandler{
 		reviewService: reviewService,
+		pdfService:    service.NewPDFService(),
 	}
 }
 
@@ -120,6 +124,74 @@ func (h *ReviewHandler) GetReview(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, review)
+}
+
+// GetReviewPDF generates and returns a PDF report for a review
+// @Summary      Get review as PDF
+// @Description  Generate and download a PDF report for a code review
+// @Tags         reviews
+// @Produce      application/pdf
+// @Param        id     path      string  true  "Review ID"
+// @Success      200    {file}    binary
+// @Failure      400    {object}  map[string]string
+// @Failure      401    {object}  map[string]string
+// @Failure      403    {object}  map[string]string
+// @Failure      404    {object}  map[string]string
+// @Failure      500    {object}  map[string]string
+// @Security     BearerAuth
+// @Router       /reviews/{id}/pdf [get]
+func (h *ReviewHandler) GetReviewPDF(c *gin.Context) {
+	userID, ok := middleware.GetUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Unauthorized",
+		})
+		return
+	}
+
+	reviewIDStr := c.Param("id")
+	reviewID, err := uuid.Parse(reviewIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid review ID",
+		})
+		return
+	}
+
+	review, err := h.reviewService.GetByID(c.Request.Context(), userID, reviewID)
+	if err != nil {
+		if err == domain.ErrReviewNotFound {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "Review not found",
+			})
+			return
+		}
+		if err == domain.ErrReviewAccessDenied {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "Access denied",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to get review",
+		})
+		return
+	}
+
+	pdfBytes, err := h.pdfService.GenerateReviewPDF(review)
+	if err != nil {
+		logger.Error("[GetReviewPDF] Failed to generate PDF", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to generate PDF",
+		})
+		return
+	}
+
+	filename := fmt.Sprintf("review-%s.pdf", reviewID.String()[:8])
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	c.Header("Content-Type", "application/pdf")
+	c.Header("Content-Length", fmt.Sprintf("%d", len(pdfBytes)))
+	c.Data(http.StatusOK, "application/pdf", pdfBytes)
 }
 
 // ListReviews returns all reviews for the current user
