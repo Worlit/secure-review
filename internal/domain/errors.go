@@ -26,7 +26,6 @@ var (
 	// Validation errors
 	ErrInvalidInput = errors.New("invalid input data")
 
-	// OpenAI errors
-	ErrOpenAIUnavailable = errors.New("openai service unavailable")
-	ErrAnalysisFailed    = errors.New("code analysis failed")
+	// AI errors
+	ErrAnalysisFailed = errors.New("code analysis failed")
 )

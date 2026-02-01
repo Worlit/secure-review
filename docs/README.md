@@ -228,13 +228,13 @@ go test -cover ./...
 - `AuthService` - только аутентификация
 - `UserService` - только операции с пользователями
 - `ReviewService` - только операции с reviews
-- `OpenAICodeAnalyzer` - только анализ кода
+- `CopilotAnalyzer` - только анализ кода
 
 ### Open/Closed Principle (OCP)
 
 Система открыта для расширения через интерфейсы:
 
-- `CodeAnalyzer` - можно добавить другие анализаторы (не только OpenAI)
+- `CodeAnalyzer` - можно добавить другие анализаторы (не только Copilot)
 - `TokenGenerator` - можно заменить JWT на другую систему
 - `PasswordHasher` - можно использовать другой алгоритм хэширования
 
@@ -244,7 +244,7 @@ go test -cover ./...
 
 - `UserRepositoryAdapter` implements `domain.UserRepository`
 - `ReviewRepositoryAdapter` implements `domain.ReviewRepository`
-- `OpenAICodeAnalyzer` implements `CodeAnalyzer`
+- `CopilotAnalyzer` implements `CodeAnalyzer`
 
 ### Interface Segregation Principle (ISP)
 

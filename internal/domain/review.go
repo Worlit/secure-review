@@ -116,14 +116,14 @@ type ReviewListResponse struct {
 	TotalPages int              `json:"total_pages"`
 }
 
-// AnalysisRequest represents the request to OpenAI for code analysis
+// AnalysisRequest represents the request to GitHub Copilot for code analysis
 type AnalysisRequest struct {
 	Code         string  `json:"code"`
 	Language     string  `json:"language"`
 	CustomPrompt *string `json:"custom_prompt,omitempty"`
 }
 
-// AnalysisResult represents the result from OpenAI code analysis
+// AnalysisResult represents the result from GitHub Copilot code analysis
 type AnalysisResult struct {
 	Summary        string               `json:"summary"`
 	SecurityIssues []SecurityIssueInput `json:"security_issues"`

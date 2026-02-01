@@ -68,15 +68,15 @@ go test -v ./tests/...
 
 ### Покрытие тестами
 
-| Модуль | Покрытие |
-|--------|----------|
-| Auth Service | ✅ Полное (регистрация, логин, токены, пароли) |
-| User Service | ✅ Полное (CRUD операции) |
-| Review Service | ✅ Полное (создание, анализ, GitHub интеграция) |
-| JWT TokenGenerator | ✅ Полное |
-| Password Hasher | ✅ Полное |
-| Health Handler | ✅ Полное |
-| Middleware Auth | ✅ Полное |
+| Модуль             | Покрытие                                        |
+| ------------------ | ----------------------------------------------- |
+| Auth Service       | ✅ Полное (регистрация, логин, токены, пароли)  |
+| User Service       | ✅ Полное (CRUD операции)                       |
+| Review Service     | ✅ Полное (создание, анализ, GitHub интеграция) |
+| JWT TokenGenerator | ✅ Полное                                       |
+| Password Hasher    | ✅ Полное                                       |
+| Health Handler     | ✅ Полное                                       |
+| Middleware Auth    | ✅ Полное                                       |
 
 ## Структура проекта
 
@@ -107,15 +107,16 @@ secure-review/
 
 ## API эндпоинты
 
-| Метод | Путь                    | Описание            |
-| ----- | ----------------------- | ------------------- |
-| POST  | `/api/v1/auth/register` | Регистрация         |
-| POST  | `/api/v1/auth/login`    | Вход                |
-| GET   | `/api/v1/auth/github`   | GitHub OAuth URL    |
-| POST  | `/api/v1/reviews`       | Создать анализ кода |
-| GET   | `/api/v1/reviews`       | Список анализов     |
-| GET   | `/api/v1/reviews/:id`   | Детали анализа      |
-| GET   | `/health`               | Health check        |
+| Метод | Путь                      | Описание            |
+| ----- | ------------------------- | ------------------- |
+| POST  | `/api/v1/auth/register`   | Регистрация         |
+| POST  | `/api/v1/auth/login`      | Вход                |
+| GET   | `/api/v1/auth/github`     | GitHub OAuth URL    |
+| POST  | `/api/v1/reviews`         | Создать анализ кода |
+| GET   | `/api/v1/reviews`         | Список анализов     |
+| GET   | `/api/v1/reviews/:id`     | Детали анализа      |
+| GET   | `/api/v1/reviews/:id/pdf` | Скачать PDF отчет   |
+| GET   | `/health`                 | Health check        |
 
 ## Документация
 

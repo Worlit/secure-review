@@ -14,19 +14,24 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /secure-review ./cmd/api
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /secure-review ./cmd/api
 
 # Final stage
-FROM alpine:latest
+FROM alpine:3.19
 
-RUN apk --no-cache add ca-certificates
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates tzdata
 
 WORKDIR /root/
 
+# Copy the binary from builder
 COPY --from=builder /secure-review .
 
+# Expose port
 EXPOSE 8080
 
+# Run the application
 CMD ["./secure-review"]
 ```
 
@@ -57,6 +62,7 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
+
 
   postgres:
     image: postgres:14-alpine

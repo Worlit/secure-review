@@ -590,6 +590,28 @@ Authorization: Bearer <token>
 
 ---
 
+#### GET /reviews/:id/pdf
+
+Скачивание отчета о проверке в формате PDF.
+
+**Parameters:**
+
+- `id` (path, required) - ID проверки
+
+**Response (200 OK):**
+
+- `Content-Type: application/pdf`
+- `Content-Disposition: attachment; filename="review-<id>.pdf"`
+- Binary PDF content
+
+**Errors:**
+
+- `404 Not Found` - Проверка не найдена
+- `403 Forbidden` - Нет доступа к проверке
+- `500 Internal Server Error` - Ошибка генерации PDF
+
+---
+
 #### DELETE /reviews/:id
 
 Удалить code review. Требует аутентификации.
