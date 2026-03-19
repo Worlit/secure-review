@@ -1,0 +1,131 @@
+# Secure Review
+
+Backend API для анализа кода на безопасность с использованием AI (GitHub Copilot).
+
+## Возможности
+
+- 🔐 **Аутентификация** — JWT + GitHub OAuth (Login & Linking)
+- 🔍 **AI-анализ кода** — обнаружение уязвимостей через GitHub Copilot
+- 🛠️ **GitHub App** — Интеграция с репозиториями пользователей
+- 📝 **Swagger UI** — Интерактивная документация API
+- 📊 **Детальные отчёты** — severity, CWE, рекомендации по исправлению
+- 🏗️ **Clean Architecture** — SOLID принципы, GORM ORM
+
+## Документация API
+
+Документация доступна в формате Swagger/OpenAPI.
+После запуска сервера перейдите по адресу:
+
+👉 [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
+
+## Технологии
+
+| Категория       | Технология                  |
+| --------------- | --------------------------- |
+| Язык            | Go 1.24+                    |
+| Web Framework   | Gin                         |
+| ORM             | GORM (TypeORM-подобный API) |
+| База данных     | PostgreSQL 14+              |
+| Логирование     | log/slog (JSON/Text)        |
+| AI              | GitHub Copilot API          |
+| Аутентификация  | JWT + GitHub OAuth 2.0      |
+| Контейнеризация | Docker, Docker Compose      |
+
+## Быстрый старт
+
+```bash
+# Клонировать репозиторий
+git clone https://github.com/yourusername/secure-review.git
+cd secure-review
+
+# Настроить переменные окружения
+cp .env.example .env
+# Отредактируйте .env с вашими ключами
+
+# Запуск через Docker Compose
+docker-compose up -d
+
+# Или локально
+go mod download
+go run cmd/api/main.go
+# Открыть http://localhost:8080/swagger/index.html
+```
+
+## Тестирование
+
+Проект содержит unit и интеграционные тесты с использованием фейковых реализаций внешних зависимостей.
+
+```bash
+# Запуск всех тестов
+go test -v ./...
+
+# Запуск только unit тестов сервисов
+go test -v ./internal/service/...
+
+# Запуск интеграционных тестов
+go test -v ./tests/...
+```
+
+### Покрытие тестами
+
+| Модуль             | Покрытие                                        |
+| ------------------ | ----------------------------------------------- |
+| Auth Service       | ✅ Полное (регистрация, логин, токены, пароли)  |
+| User Service       | ✅ Полное (CRUD операции)                       |
+| Review Service     | ✅ Полное (создание, анализ, GitHub интеграция) |
+| JWT TokenGenerator | ✅ Полное                                       |
+| Password Hasher    | ✅ Полное                                       |
+| Health Handler     | ✅ Полное                                       |
+| Middleware Auth    | ✅ Полное                                       |
+
+## Структура проекта
+
+```
+secure-review/
+├── cmd/api/main.go          # Точка входа
+├── internal/
+│   ├── config/              # Конфигурация
+│   ├── database/            # GORM подключение (DataSource)
+│   ├── domain/              # Интерфейсы и бизнес-правила
+│   ├── entity/              # GORM Entity (User, CodeReview, SecurityIssue)
+│   ├── handler/             # HTTP обработчики
+│   ├── logger/              # Настройка sLog
+│   ├── middleware/          # JWT auth, CORS, logging
+│   ├── repository/          # GORM репозитории
+│   ├── router/              # Gin роутинг
+│   └── service/             # Бизнес-логика
+│       ├── auth/            # Аутентификация (JWT, пароли)
+│       ├── user/            # Сервис пользователей
+│       ├── review/          # Сервис code review
+│       ├── github/          # GitHub OAuth и App сервисы
+│       ├── analyzer/        # AI анализ кода (GitHub Copilot)
+│       └── pdf/             # Генерация PDF отчётов
+├── tests/                   # Интеграционные тесты
+│   └── fakes/               # Фейковые реализации для тестов
+└── docs/                    # Документация
+```
+
+## API эндпоинты
+
+| Метод | Путь                      | Описание            |
+| ----- | ------------------------- | ------------------- |
+| POST  | `/api/v1/auth/register`   | Регистрация         |
+| POST  | `/api/v1/auth/login`      | Вход                |
+| GET   | `/api/v1/auth/github`     | GitHub OAuth URL    |
+| POST  | `/api/v1/reviews`         | Создать анализ кода |
+| GET   | `/api/v1/reviews`         | Список анализов     |
+| GET   | `/api/v1/reviews/:id`     | Детали анализа      |
+| GET   | `/api/v1/reviews/:id/pdf` | Скачать PDF отчет   |
+| GET   | `/health`                 | Health check        |
+
+## Документация
+
+- [Подробная документация](docs/README.md)
+- [API Reference](docs/API.md)
+- [Схема БД](docs/DATABASE.md)
+- [GitHub Integration](docs/GITHUB_INTEGRATION.md)
+- [Деплой](docs/DEPLOYMENT.md)
+
+## Лицензия
+
+MIT

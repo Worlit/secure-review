@@ -1,0 +1,217 @@
+basePath: /api/v1
+definitions:
+  domain.CreateReviewInput:
+    properties:
+      code:
+        type: string
+      custom_prompt:
+        type: string
+      language:
+        type: string
+      repo_branch:
+        type: string
+      repo_name:
+        type: string
+      repo_owner:
+        type: string
+      title:
+        maxLength: 255
+        minLength: 1
+        type: string
+    required:
+    - title
+    type: object
+  domain.ReviewResponse:
+    properties:
+      code:
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      custom_prompt:
+        type: string
+      id:
+        type: string
+      language:
+        type: string
+      result:
+        type: string
+      security_issues:
+        items:
+          $ref: '#/definitions/domain.SecurityIssue'
+        type: array
+      status:
+        $ref: '#/definitions/domain.ReviewStatus'
+      title:
+        type: string
+      user_id:
+        type: string
+    type: object
+  domain.ReviewStatus:
+    enum:
+    - pending
+    - processing
+    - completed
+    - failed
+    type: string
+    x-enum-varnames:
+    - ReviewStatusPending
+    - ReviewStatusProcessing
+    - ReviewStatusCompleted
+    - ReviewStatusFailed
+  domain.SecurityIssue:
+    properties:
+      created_at:
+        type: string
+      cwe:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      line_end:
+        type: integer
+      line_start:
+        type: integer
+      review_id:
+        type: string
+      severity:
+        $ref: '#/definitions/domain.SecuritySeverity'
+      suggestion:
+        type: string
+      title:
+        type: string
+    type: object
+  domain.SecuritySeverity:
+    enum:
+    - critical
+    - high
+    - medium
+    - low
+    - info
+    type: string
+    x-enum-varnames:
+    - SeverityCritical
+    - SeverityHigh
+    - SeverityMedium
+    - SeverityLow
+    - SeverityInfo
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: This is the API for the Secure Code Review service.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Secure Code Review API
+  version: "1.0"
+paths:
+  /reviews:
+    post:
+      consumes:
+      - application/json
+      description: Create a new code review request with manual code or GitHub repository
+      parameters:
+      - description: Review input
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateReviewInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.ReviewResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a code review
+      tags:
+      - reviews
+  /reviews/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get a code review by ID
+      parameters:
+      - description: Review ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.ReviewResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a review
+      tags:
+      - reviews
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
